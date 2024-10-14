@@ -1,0 +1,11 @@
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+documentation/
+figures/
+phylo_exposure/
+presentation/
+processed_data/
+raw_data/
+results/
