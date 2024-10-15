@@ -94,5 +94,4 @@ for(j in seq_along(models)){
             file = here("results/raw_results", paste0("raw_",models[j],"_",groups[i],".rds")))
   
   }
-}
-
+} 
