@@ -1,17 +1,9 @@
-files <- list.files(paste0(path, "Results/Raw Results"), rec=T, full.names=T)
-files_raw <- grep("raw", files, value = T)
-files_rolling_20yr <- grep("rolling_20yr", files, value = T)
-files_rolling_30yr <- grep("rolling_30yr", files, value = T)
+# Code to calculate dates of exposure and de-exposure
 
+files <- list.files(here("results/raw_results"), rec = T, full.names = T)
 models <- c("CanESM5","CNRM-ESM2-1","GISS-E2-1-G","IPSL-CM6A-LR","MRI-ESM2-0")
-
 groups <- c("Amphibians","Birds","Mammals","Reptiles","Fishes")
 
-
-
-
-# groups <- c("Abalones","Amphibians","Birds","Conesnails","Fishes","Lobsters",
-#             "Mammals","Mangroves","Reefs","Reptiles","Seagrasses")
 
 get_exposure_times <- function(x, original.state, consecutive.elements){
   
@@ -20,11 +12,8 @@ get_exposure_times <- function(x, original.state, consecutive.elements){
 
   n <- as.numeric(x[-c(1,2)])
 
-  # x <- c(1,1,1,1,1,1,1,1,1,1,0,0,0,0,0,0,1,1,1,1,1,1,0,0,0,0,0,0,1,1,1)
-  
   # Calculate shift sequences
   rle_x <- data.frame(unclass(rle(n)))
-
   
   # Add year
   rle_x$year <- 2015 + cumsum(rle_x$lengths) - rle_x$lengths
@@ -88,14 +77,14 @@ get_exposure_times <- function(x, original.state, consecutive.elements){
   }
 }
 
-cl <- makeCluster(7)
+cl <- makeCluster(detectCores() - 1)
 clusterEvalQ(cl, library(dplyr))
 clusterExport(cl, "get_exposure_times")
 
 
 for(i in seq_along(models)){
   
-  my_files <- grep(models[i], files_raw, value=T)
+  my_files <- grep(models[i], files, value=T)
     
     for(j in seq_along(groups)){
       
@@ -120,94 +109,10 @@ for(i in seq_along(models)){
         relocate(group)
         
       saveRDS(res_final,
-              file = paste0(path, "Results/Species Exposure Dates/raw_",groups[j],"_",models[i],".rds"))
+              file = here("results/species_exposure_dates", paste0("raw_",groups[j],"_",models[i],".rds")))
       
   }
 }
 
 stopCluster(cl)
 
-# rolling 20yr  -----
-
-
-cl <- makeCluster(7)
-clusterEvalQ(cl, library(dplyr))
-clusterExport(cl, "get_exposure_times")
-
-for(i in seq_along(models)){
-  
-  my_files <- grep(models[i], files_rolling_20yr, value=T)
-  
-  for(j in seq_along(groups)){
-    
-    raw_results <- readRDS(grep(groups[j], my_files, value = T))
-    
-    raw_results <- raw_results %>% 
-      bind_rows() %>% 
-      select(-as.character(2201:2219)) %>% 
-      mutate(sum = rowSums(select(., starts_with("2")))) %>% 
-      filter(sum < 182) %>%  # select only cells with < 182 suitable years (>= 182 years means no exposure)
-      select(-sum)
-    
-    res_final <- pbapply(X = raw_results, 
-                         MARGIN = 1, 
-                         FUN = function(x) get_exposure_times(x = x, original.state = 1, consecutive.elements = 5),
-                         cl = cl)
-    
-    res_final <- res_final %>% 
-      bind_rows() %>% 
-      na.omit() %>% 
-      mutate(group = groups[j]) %>% 
-      relocate(group)
-    
-    saveRDS(res_final,
-            file = paste0(path, "Results/Species Exposure Dates/rolling_20yr_",groups[j],"_",models[i],".rds"))
-    
-  }
-}
-
-stopCluster(cl)
-
-
-
-
-# rolling 30yr  -----
-
-
-cl <- makeCluster(7)
-clusterEvalQ(cl, library(dplyr))
-clusterExport(cl, "get_exposure_times")
-
-for(i in seq_along(models)){
-  
-  my_files <- grep(models[i], files_rolling_30yr, value=T)
-  
-  for(j in seq_along(groups)){
-     
-    raw_results <- readRDS(grep(groups[j], my_files, value = T))
-    
-    raw_results <- raw_results %>% 
-      bind_rows() %>% 
-      select(-as.character(2201:2219)) %>% 
-      mutate(sum = rowSums(select(., starts_with("2")))) %>% 
-      filter(sum < 182) %>%  # select only cells with < 182 suitable years (>= 182 years means no exposure)
-      select(-sum)
-    
-    res_final <- pbapply(X = raw_results, 
-                         MARGIN = 1, 
-                         FUN = function(x) get_exposure_times(x = x, original.state = 1, consecutive.elements = 5),
-                         cl = cl)
-    
-    res_final <- res_final %>% 
-      bind_rows() %>% 
-      na.omit() %>% 
-      mutate(group = groups[j]) %>% 
-      relocate(group)
-    
-    saveRDS(res_final,
-            file = paste0(path, "Results/Species Exposure Dates/rolling_30yr_",groups[j],"_",models[i],".rds"))
-    
-  }
-}
-
-stopCluster(cl)
