@@ -114,5 +114,5 @@ for(i in seq_along(models)){
   }
 }
 
-stopCluster(cl)
+stopCluster(cl) 
 
