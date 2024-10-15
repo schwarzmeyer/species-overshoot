@@ -1,9 +1,9 @@
 # code to compute upper and lowet thermal niche limits for each species
 
 # load files
-spp_files <- list.files(paste0(path,"Data/Species Data/Range Maps Grid Cells"), full.names = T)
-spp_names <- list.files(paste0(path,"Data/Species Data/Range Maps Grid Cells"), full.names = F)
-temp_matrices <- list.files(paste0(path, "Data/Climate Data/Temperature Matrices/"), full.names = T)
+spp_files <- list.files(here("processed_data/species_data/range_maps_grid_cells"), full.names = T)
+spp_names <- list.files(here("processed_data/species_data/range_maps_grid_cells"), full.names = F)
+temp_matrices <- list.files(here("processed_data/climate_data/temperature_matrices/"), full.names = T)
 models <- c("CanESM5","CNRM-ESM2-1","GISS-E2-1-G","IPSL-CM6A-LR","MRI-ESM2-0")
 
 
@@ -12,8 +12,7 @@ get_niche_limits <- function(species_ranges, temperature_matrix, temperature_dat
   
   if(temperature_data_type == "raw") first_year <- 1850
   if(temperature_data_type == "rolling_30yr") first_year <- 1879
-  if(temperature_data_type == "rolling_20yr") first_year <- 1869
-  
+
   data <- temperature_matrix %>% 
     select(WorldID, as.character(first_year:2014)) %>% 
     filter(WorldID %in% species_ranges) %>% 
@@ -108,62 +107,11 @@ for(i in seq_along(spp_files)){
     res <- na.omit(res)
     
     res# save
-    saveRDS(res, file = paste0(path, "Data/Species Data/Niche Limits/",temperature_data_type,"/niche_",my_model,"_",spp_names[i]))
+    saveRDS(res, 
+            file = here("processed_data/species_data/niche_limits", paste0(temperature_data_type,"/niche_",my_model,"_",spp_names[i])))
     
     gc()
   }
   
 }
-
-
-# rolling averages -----
-
-spp_files <- list.files(paste0(path,"Data/Species Data/Range Maps Grid Cells"), full.names = T)
-spp_names <- list.files(paste0(path,"Data/Species Data/Range Maps Grid Cells"), full.names = F)
-temp_matrices <- list.files(paste0(path, "Data/Climate Data/Temperature Matrices Rolling Avg/"), full.names = T)
-models <- c("CanESM5","CNRM-ESM2-1","GISS-E2-1-G","IPSL-CM6A-LR","MRI-ESM2-0")
-
-# raw temperature ----
-temperature_data_type <-  c("rolling_30yr", "rolling_20yr")
-
-for(i in seq_along(spp_files)){
-  
-  spp_data <- readRDS(spp_files[i])
-  
-  for(my_model in models){
-    
-    if(any(str_detect(spp_files[i], c("Amphibians","Birds","Mammals","Reptiles")))) {
-      
-      temp_matrices_filtered <- grep("land", temp_matrices, value = T)
-      
-    } else {
-      
-      temp_matrices_filtered <- grep("ocean", temp_matrices, value = T)
-      
-    } 
-    
-    for(j in seq_along(temperature_data_type)) {
-    
-    if(temperature_data_type[j] == "rolling_30yr") temp_matrices_filtered_roll <- grep("30yr", temp_matrices_filtered, value = T)
-    if(temperature_data_type[j] == "rolling_20yr") temp_matrices_filtered_roll <- grep("20yr", temp_matrices_filtered, value = T)
-    
-    
-    # load temperature matrix
-    temp_matrix <- readRDS(grep(my_model, temp_matrices_filtered_roll, value = T))
-    
-    # run
-    plan("multisession", workers = availableCores() - 1)
-    
-    res <- future_map_dfr(spp_data, ~ get_niche_limits(.x, temp_matrix, temperature_data_type[j]), .id = "species", .progress = T)
-    
-    res <- na.omit(res)
-    
-    # save
-    saveRDS(res, file = paste0(path, "Data/Species Data/Niche Limits/",temperature_data_type[j],"/niche_",my_model,"_",spp_names[i]))
-    
-    gc()
-  }
- }
-}
-    
 
