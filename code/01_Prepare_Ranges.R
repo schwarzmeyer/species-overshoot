@@ -1,6 +1,6 @@
 # load grid
-terrestrial_grid <- readRDS(paste0(path, "Data/Spatial Data/terrestrial_grid_equal_area.rds"))
-ocean_grid <- readRDS(paste0(path, "Data/Spatial Data/ocean_grid_equal_area.rds"))
+terrestrial_grid <- readRDS(here("raw_data/spatial_data/terrestrial_grid_equal_area.rds"))
+ocean_grid <- readRDS(here("raw_data/spatial_data/ocean_grid_equal_area.rds"))
 
 # this function intersects IUCN shapefiles with our 100 km grid,
 # returning a list where each element is a species, and the values indicate 
@@ -54,46 +54,46 @@ prepare_range <- function(range_data, grid, realm){
 }
 
 
+# increase max memory
+options(future.globals.maxSize = 9 * 1024^3)
 
 
 # amphibians ----
-ranges <- read_sf(paste0(path, "Data/Species Data/Range Maps IUCN/AMPHIBIANS/AMPHIBIANS.shp"))
+ranges <- read_sf(here("raw_data/species_data/range_maps_iucn/AMPHIBIANS/AMPHIBIANS.shp"))
 
 # run
 res <- prepare_range(ranges, terrestrial_grid, realm = "terrestrial")
 
 
 # write result
-saveRDS(res, paste0(path, "Data/Species Data/Range Maps Grid Cells/Amphibians.rds"))
+saveRDS(res, here("processed_data/species_data/range_maps_grid_cells/Amphibians.rds"))
  
 # write species attribute table
 ranges_df <- st_drop_geometry(ranges)
-write.csv2(ranges_df, paste0(path, "Data/Species Data/Attribute Tables/Amphibians.csv"), row.names = F)
-
-
+write.csv2(ranges_df, here("processed_data/species_data/attribute_tables/Amphibians.csv"), row.names = F)
 
 
 
 # mammals ----
-ranges <- read_sf(paste0(path, "Data/Species Data/Range Maps IUCN/MAMMALS_TERRESTRIAL_ONLY/MAMMALS_TERRESTRIAL_ONLY.shp"))
+ranges <- read_sf(here("raw_data/species_data/range_maps_iucn/MAMMALS_TERRESTRIAL_ONLY/MAMMALS_TERRESTRIAL_ONLY.shp"))
 
 # run
 res <- prepare_range(ranges, terrestrial_grid, realm = "terrestrial")
 
 # write result
-saveRDS(res, paste0(path, "Data/Species Data/Range Maps Grid Cells/Mammals.rds"))
+saveRDS(res, here("processed_data/species_data/range_maps_grid_cells/Mammals.rds"))
 
 # write species attribute table
 ranges_df <- st_drop_geometry(ranges)
-write.csv2(ranges_df, paste0(path, "Data/Species Data/Attribute Tables/Mammals.csv"), row.names = F)
+write.csv2(ranges_df, here("processed_data/species_data/attribute_tables/Mammals.csv"), row.names = F)
 
 
 
 
 
 # reptiles ----
-ranges1 <- read_sf(paste0(path, "Data/Species Data/Range Maps IUCN/REPTILES/REPTILES_PART1.shp"))
-ranges2 <- read_sf(paste0(path, "Data/Species Data/Range Maps IUCN/REPTILES/REPTILES_PART2.shp"))
+ranges1 <- read_sf(here("raw_data/species_data/range_maps_iucn/REPTILES/REPTILES_PART1.shp"))
+ranges2 <- read_sf(here("raw_data/species_data/range_maps_iucn/REPTILES/REPTILES_PART2.shp"))
 ranges1 <- dplyr::select(ranges1, -OBJECTID)
 ranges <- rbind(ranges1, ranges2)
 
@@ -101,18 +101,18 @@ ranges <- rbind(ranges1, ranges2)
 res <- prepare_range(ranges, terrestrial_grid, realm = "terrestrial")
 
 # write result
-saveRDS(res, paste0(path, "Data/Species Data/Range Maps Grid Cells/Reptiles.rds"))
+saveRDS(res, here("processed_data/species_data/range_maps_grid_cells/Reptiles.rds"))
 
 # write species attribute table
 ranges_df <- st_drop_geometry(ranges)
-write.csv2(ranges_df, paste0(path, "Data/Species Data/Attribute Tables/Reptiles.csv"), row.names = F)
+write.csv2(ranges_df, here("processed_data/species_data/attribute_tables/Reptiles.csv"), row.names = F)
 
 
 
 
 
 # birds ----
-ranges <- st_read(paste0(path, "Data/Species Data/Range Maps IUCN/BIRDS/BOTW.gdb"), layer = "All_Species")
+ranges <- st_read(here("raw_data/species_data/range_maps_iucn/BIRDS/BOTW.gdb"), layer = "All_Species")
 
 # run (spliting the data into four parts to avoid filling the RAM)
 birds <- unique(ranges$sci_name)
@@ -124,86 +124,18 @@ res4 <- prepare_range(ranges[ranges$sci_name %in% birds[8001:length(birds)],], t
 res <- c(res1, res2, res3, res4)
 
 # write result
-saveRDS(res, paste0(path, "Data/Species Data/Range Maps Grid Cells/Birds.rds"))
+saveRDS(res, here("processed_data/species_data/range_maps_grid_cells/Birds.rds"))
 
 # write species attribute table
 ranges_df <- st_drop_geometry(ranges)
-write.csv2(ranges_df, paste0(path, "Data/Species Data/Attribute Tables/Birds.csv"), row.names = F)
-
-
-
-
-# abalones ----
-ranges <- read_sf(paste0(path, "Data/Species Data/Range Maps IUCN/ABALONES/ABALONES.shp"))
-
-# run
-res <- prepare_range(ranges, ocean_grid, realm = "marine")
-
-# write result
-saveRDS(res, paste0(path, "Data/Species Data/Range Maps Grid Cells/Abalones.rds"))
-
-# write species attribute table
-ranges_df <- st_drop_geometry(ranges)
-write.csv2(ranges_df, paste0(path, "Data/Species Data/Attribute Tables/Abalones.csv"), row.names = F)
-
-
-
-
-
-# conesnails ----
-ranges <- read_sf(paste0(path, "Data/Species Data/Range Maps IUCN/CONESNAILS/CONESNAILS.shp"))
-
-# run
-res <- prepare_range(ranges, ocean_grid, realm = "marine")
-
-# write result
-saveRDS(res, paste0(path, "Data/Species Data/Range Maps Grid Cells/Conesnails.rds"))
-
-# write species attribute table
-ranges_df <- st_drop_geometry(ranges)
-write.csv2(ranges_df, paste0(path, "Data/Species Data/Attribute Tables/Conesnails.csv"), row.names = F)
-
-
-
-
-# lobsters ----
-ranges <- read_sf(paste0(path, "Data/Species Data/Range Maps IUCN/LOBSTERS/LOBSTERS.shp"))
-
-# run
-res <- prepare_range(ranges, ocean_grid, realm = "marine")
-
-# write result
-saveRDS(res, paste0(path, "Data/Species Data/Range Maps Grid Cells/Lobsters.rds"))
-
-# write species attribute table
-ranges_df <- st_drop_geometry(ranges)
-write.csv2(ranges_df, paste0(path, "Data/Species Data/Attribute Tables/Lobsters.csv"), row.names = F)
-
-
-
-
-
-# mangrooves ----
-ranges <- read_sf(paste0(path, "Data/Species Data/Range Maps IUCN/MANGROVES/MANGROVES.shp"))
-
-# run
-res <- prepare_range(ranges, ocean_grid, realm = "marine")
-
-# write result
-saveRDS(res, paste0(path, "Data/Species Data/Range Maps Grid Cells/Mangroves.rds"))
-
-# write species attribute table
-ranges_df <- st_drop_geometry(ranges)
-write.csv2(ranges_df, paste0(path, "Data/Species Data/Attribute Tables/Mangroves.csv"), row.names = F)
-
-
+write.csv2(ranges_df, here("processed_data/species_data/attribute_tables/Birds.csv"), row.names = F)
 
 
 
 # fishes ---- 
-ranges1 <- read_sf(paste0(path, "Data/Species Data/Range Maps IUCN/MARINEFISH/MARINEFISH_PART1.shp"))
-ranges2 <- read_sf(paste0(path, "Data/Species Data/Range Maps IUCN/MARINEFISH/MARINEFISH_PART2.shp"))
-ranges3 <- read_sf(paste0(path, "Data/Species Data/Range Maps IUCN/MARINEFISH/MARINEFISH_PART3.shp"))
+ranges1 <- read_sf(here("raw_data/species_data/range_maps_iucn/MARINEFISH/MARINEFISH_PART1.shp"))
+ranges2 <- read_sf(here("raw_data/species_data/range_maps_iucn/MARINEFISH/MARINEFISH_PART2.shp"))
+ranges3 <- read_sf(here("raw_data/species_data/range_maps_iucn/MARINEFISH/MARINEFISH_PART3.shp"))
 ranges <- rbind(ranges1, ranges2, ranges3)
 
 # run (spliting the data into three parts to avoid filling the RAM)
@@ -214,47 +146,10 @@ res3 <- prepare_range(ranges3, ocean_grid, realm = "marine")
 res <- c(res1, res2, res3)
 
 # write result
-saveRDS(res, paste0(path, "Data/Species Data/Range Maps Grid Cells/Fishes.rds"))
+saveRDS(res, here("processed_data/species_data/range_maps_grid_cells/Fishes.rds"))
 
 # write species attribute table
 ranges_df <- st_drop_geometry(ranges)
-write.csv2(ranges_df, paste0(path, "Data/Species Data/Attribute Tables/Fishes.csv"), row.names = F)
-
-
-
-
-
-# reefs ----
-ranges1 <- read_sf(paste0(path, "Data/Species Data/Range Maps IUCN/REEF_FORMING_CORALS/REEF_FORMING_CORALS_PART1.shp"))
-ranges2 <- read_sf(paste0(path, "Data/Species Data/Range Maps IUCN/REEF_FORMING_CORALS/REEF_FORMING_CORALS_PART2.shp"))
-ranges3 <- read_sf(paste0(path, "Data/Species Data/Range Maps IUCN/REEF_FORMING_CORALS/REEF_FORMING_CORALS_PART3.shp"))
-ranges <- rbind(ranges1, ranges2, ranges3)
-
-# run
-res <- prepare_range(ranges, ocean_grid, realm = "marine")
-
-# write result
-saveRDS(res, paste0(path, "Data/Species Data/Range Maps Grid Cells/Reefs.rds"))
-
-# write species attribute table
-ranges_df <- st_drop_geometry(ranges)
-write.csv2(ranges_df, paste0(path, "Data/Species Data/Attribute Tables/Reefs.csv"), row.names = F)
-
-
-
-
-
-# seagrass ----
-ranges <- read_sf(paste0(path, "Data/Species Data/Range Maps IUCN/SEAGRASSES/SEAGRASSES.shp"))
-
-# run
-res <- prepare_range(ranges, ocean_grid, realm = "marine")
-
-# write result
-saveRDS(res, paste0(path, "Data/Species Data/Range Maps Grid Cells/Seagrasses.rds"))
-
-# write species attribute table
-ranges_df <- st_drop_geometry(ranges)
-write.csv2(ranges_df, paste0(path, "Data/Species Data/Attribute Tables/Seagrasses.csv"), row.names = F)
+write.csv2(ranges_df, here("processed_data/species_data/attribute_tables/Fishes.csv"), row.names = F)
 
 
