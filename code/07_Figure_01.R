@@ -1,12 +1,13 @@
 # POTENTIAL FIGURE 1 
 
-data_median <- readRDS(paste0(path, "Results/Risk Metric/risk_raw_median.rds"))
+data_median <- readRDS(here("results/risk/risk_raw_median.rds"))
 
-amph <- readRDS(paste0(path, "Data/Species Data/Range Maps Grid Cells/Amphibians.rds"))
-bird <- readRDS(paste0(path, "Data/Species Data/Range Maps Grid Cells/Birds.rds"))
-mamm <- readRDS(paste0(path, "Data/Species Data/Range Maps Grid Cells/Mammals.rds"))
-rept <- readRDS(paste0(path, "Data/Species Data/Range Maps Grid Cells/Reptiles.rds"))
-fish <- readRDS(paste0(path, "Data/Species Data/Range Maps Grid Cells/Fishes.rds"))
+amph <- readRDS(here("processed_data/species_data/range_maps_grid_cells/Amphibians.rds"))
+bird <- readRDS(here("processed_data/species_data/range_maps_grid_cells/Birds.rds"))
+mamm <- readRDS(here("processed_data/species_data/range_maps_grid_cells/Mammals.rds"))
+rept <- readRDS(here("processed_data/species_data/range_maps_grid_cells/Reptiles.rds"))
+fish <- readRDS(here("processed_data/species_data/range_maps_grid_cells/Fishes.rds"))
+
 
 # load countries polygon
 countries <- ne_countries(returnclass = "sf")
@@ -14,20 +15,14 @@ countries <- st_transform(ne_countries(returnclass = "sf"), "+proj=robin")
 
 
 # create bounding box to plot around the maps
-bound <- st_sf(geometry = st_sfc(
-  st_polygon(x = list(cbind(c(-180, rep(180, 100), rep(-180, 100)),
-                            c(-90, seq(-90, 90, length = 100), 
-                              seq(90, -90, length = 100))))), crs = 'WGS84')) %>% 
-  st_transform("+proj=robin")
+bound <- readRDS(here("raw_data/random/bbox.rds"))
 
 
-myquantile <- 0.5
+qrange <- 0.5
+qduration <- 100
 
-qrange <- quantile(data_median$range_exposed, myquantile)
-qduration <- quantile(data_median$mean_local_duration, myquantile)
-
-# qrange <- 0.5
-# qduration <- 50
+median_qrange <- median(data_median$range_exposed)
+median_qduration <- median(data_median$mean_local_duration)
 
 p1 <-  ggplot(data_median, aes(x = range_exposed*100)) +
   geom_histogram(aes(fill = range_exposed*100 >= qrange*100), binwidth = 5, boundary = 0, colour = "white") +
@@ -36,9 +31,9 @@ p1 <-  ggplot(data_median, aes(x = range_exposed*100)) +
   labs(y = "N. of species", x = "Range exposed (%)") +
   scale_y_continuous(breaks = c(0,3000,6000,9000)) +
   # scale_x_continuous(breaks = seq(0,100, length.out = 24)) +
-  annotate("segment", x = qrange*100, xend = qrange*100, y = 30, yend = 7500, color = "#721d75", linewidth = 0.8, 
+  annotate("segment", x = median_qrange*100, xend = median_qrange*100, y = 30, yend = 7500, color = "black", linewidth = 0.8, 
            linetype = 2) +
-  annotate("text", x = 33, y = 8700, label = "32%", color = "#721d75", fontface = 2, size = 3.2) +
+  annotate("text", x = median_qrange*100, y = 8700, label = "32%", color = "black", fontface = 2, size = 3.2) +
   coord_cartesian(clip = "off", ylim = c(-3000,9000)) +
   theme_tidybayes() +
   theme(legend.position = "none",
@@ -52,9 +47,9 @@ p2 <- ggplot(data_median, aes(x = mean_local_duration)) +
     scale_fill_manual(values = c("grey73","#99269c")) +
     labs(y = "N. of species", x = "Duration (years)") +
     scale_y_continuous(breaks = c(0,2000,4000,6000)) +
-    annotate("segment", x = qduration, xend = qduration, y = 30, yend = 6000, color = "#721d75", linewidth = 0.8, 
+    annotate("segment", x = median_qduration, xend = median_qduration, y = 30, yend = 6000, color = "black", linewidth = 0.8, 
            linetype = 2) +
-    annotate("text", x = 119, y = 7100, label = "109 years", color = "#721d75", fontface = 2, size = 3.2) +
+    annotate("text", x = 119, y = 7100, label = "109 years", color = "black", fontface = 2, size = 3.2) +
     coord_cartesian(clip = "off", ylim = c(-2300,6000)) +
     theme_tidybayes() +
     theme(legend.position = "none",
@@ -67,8 +62,6 @@ risk_spp <- data_median %>%
   filter(range_exposed >= qrange,
          mean_local_duration >= qduration) %>% 
   pull(species)
-
-
 
 
 range_data_land <- c(amph, bird, mamm, rept) 
@@ -127,8 +120,8 @@ data_ocean <- range_data_ocean %>%
   mutate(spp_risk_perc = spp_risk/n*100)
 
 
-grid_land <- readRDS(paste0(path, "Data/Spatial Data/terrestrial_grid_robin.rds"))
-grid_ocean <- readRDS(paste0(path, "Data/Spatial Data/ocean_grid_robin.rds"))
+grid_land <- readRDS(here("raw_data/spatial_data/terrestrial_grid_robin.rds"))
+grid_ocean <- readRDS(here("raw_data/spatial_data/ocean_grid_robin.rds"))
 
 grid_land <- left_join(grid_land, data_land, by = "WorldID")
 grid_ocean <- left_join(grid_ocean, data_ocean, by = "WorldID")
@@ -168,7 +161,7 @@ pmap_perc <- ggplot() +
         legend.text = element_text(size = 10)) +
   guides(fill = guide_colorsteps(title.position = 'top',
                                  title.hjust = .5, 
-                                 barwidth = unit(18, 'lines'), barheight = unit(.65, 'lines'))); pmap_perc
+                                 barwidth = unit(18, 'lines'), barheight = unit(.65, 'lines')))
 
 
 
@@ -202,7 +195,7 @@ p3 <- data_median %>%
         plot.margin = margin(b = 0, l = 0, r = 15),
         legend.position = "none",
         axis.text.y = element_text(size = 10),
-        axis.line.y = element_blank()); p3
+        axis.line.y = element_blank());
   
 
 
@@ -213,7 +206,7 @@ pp <- (((p1 / p2)  | p3 ) + plot_layout(widths = c(0.6,1))) / pmap_perc +
         plot.tag.position = "topleft")
 
 
-ggsave(paste0(path, "Figures/_Fig_01_v1.jpg"),
+ggsave(here("figures/Fig_01.jpg"),
        pp,
        width = 24, height = 25, units = "cm", dpi = 700)
 
