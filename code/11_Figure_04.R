@@ -384,7 +384,7 @@ p_map <- map(fill_columns, function(x){
 
 
 
-
+ 
 
 p <- wrap_elements(
   p1[[1]] + plot_spacer() + p2[[1]] + 
