@@ -237,7 +237,7 @@ p1 <- map(models, function(x){
           legend.title = element_blank(),
           panel.grid = element_blank(),
           axis.text = element_blank(),
-          axis.title.y = element_text(size = 9, vjust = 3))
+          axis.title.y = element_text(size = 10, vjust = 3))
   
   return(my_plot)
   
@@ -276,8 +276,8 @@ p2 <- map(models, function(x){
     theme_tidybayes() +
     theme(panel.grid.major = element_blank(),
           panel.grid.minor = element_blank(),
-          axis.title.x = element_text(size = 9.5, vjust = -3),
-          axis.text.x = element_text(size = 8.5),
+          axis.title.x = element_text(size = 11, vjust = -3),
+          axis.text.x = element_text(size = 9.5),
           axis.text.y = element_blank(),
           axis.line.y = element_blank(),
           axis.ticks.y = element_blank(),
@@ -370,9 +370,9 @@ p_map <- map(fill_columns, function(x){
     theme(legend.position = "bottom",
           legend.direction = "horizontal",
           plot.margin = margin(t = 0.6, unit = "cm"),
-          legend.title = element_text(size = 10),
+          legend.title = element_text(size = 11),
           legend.text = element_text(size = 8),
-          plot.subtitle = element_text(size = 10.5, hjust = 0.5, vjust = -1, colour = title_colour)) +
+          plot.subtitle = element_text(size = 11, hjust = 0.5, vjust = -1, colour = title_colour)) +
     guides(fill = guide_colorsteps(title.position = 'top',
                                    title.hjust = .5, 
                                    barwidth = unit(9, 'lines'), 
@@ -397,9 +397,9 @@ p <- wrap_elements(
     plot_annotation(title = "a") &
     theme(legend.position = "top",
           legend.key.size = unit(0.4, "cm"),
-          legend.text = element_text(size = 9),
-          legend.margin = margin(b = 0.5, t = -0.5, unit = "cm"),
-          plot.title = element_text(size = 13, face = "bold", vjust = 1))) 
+          legend.text = element_text(size = 10),
+          legend.margin = margin(b = 0.8, t = -0.8, unit = "cm"),
+          plot.title = element_text(size = 13, face = "bold", vjust = 5))) 
 
 
 
@@ -408,7 +408,7 @@ p_maps <- wrap_elements(
     plot_layout(guides = "collect", heights = c(1.05, -0.17, 1.2)) +
     plot_annotation(title = "b") &
     theme(legend.position = "bottom",
-          plot.title = element_text(size = 13, face = "bold", vjust = -11)) &
+          plot.title = element_text(size = 13, face = "bold", vjust = -5)) &
     guides(fill = guide_colorsteps(title.position = "top",
                                    title.hjust = 0.5,
                                    barwidth = unit(15, 'lines'), 
@@ -421,6 +421,6 @@ p_final <- p / p_maps +
 
 ggsave(here("figures/Fig_04.jpg"),
        p_final,
-       width = 21, height = 23, units = "cm", dpi = 400)
+       width = 21, height = 24, units = "cm", dpi = 700)
 
 

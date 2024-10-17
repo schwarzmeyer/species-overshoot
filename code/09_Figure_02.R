@@ -97,8 +97,9 @@ p2 <- data_iucn %>%
   scale_y_continuous(expand = c(0,0)) +
   theme(axis.text = element_text(size = 9)); p2
 
-p <- p1 + p2 + plot_layout(ncol = 1)
-
+p <- p1 + p2 + plot_layout(ncol = 1) +
+  plot_annotation(tag_levels = "a") &
+  theme(plot.tag = element_text(size = 9.5, face = "bold"))
 
 
 ggsave(here("figures/Fig_02.jpg"),
