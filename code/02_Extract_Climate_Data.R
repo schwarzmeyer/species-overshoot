@@ -1,5 +1,5 @@
 # code to extract climate data to the Ocean and Land grids
-
+ 
 # load files
 scenarios <- c("historical","ssp534","ssp585")
 netcdfs <- list.files(here("raw_data/climate_data/CMIP6/Overshoot"), ".nc", recursive = T, full.names = T)

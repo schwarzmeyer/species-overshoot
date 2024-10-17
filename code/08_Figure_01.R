@@ -1,5 +1,5 @@
 # POTENTIAL FIGURE 1 
-
+ 
 data_median <- readRDS(here("results/risk/risk_raw_median.rds"))
 
 amph <- readRDS(here("processed_data/species_data/range_maps_grid_cells/Amphibians.rds"))

@@ -1,5 +1,5 @@
 # Risk is calculated as the proportion of geographic range exposed 
-# and duration of exposure
+# and duration of exposure 
 
 # prepare data ----
 # raw climate ----

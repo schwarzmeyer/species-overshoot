@@ -1,6 +1,6 @@
 data_median <- readRDS(here("results/risk/risk_raw_median.rds"))
 ed <- readRDS(here("processed_data/species_data/phylogenetic/mean_evol_distinctiveness.rds"))
-
+ 
 df <- left_join(data_median, ed, by = c("group", "species")) %>% 
   select(-c(n_cells_exposed, total_duration, range_size)) %>% 
   na.omit() %>% 

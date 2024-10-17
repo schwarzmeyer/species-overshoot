@@ -1,4 +1,4 @@
-# Code to calculate dates of exposure and de-exposure
+# Code to calculate dates of exposure and de-exposure 
 
 files <- list.files(here("results/raw_results"), rec = T, full.names = T)
 models <- c("CanESM5","CNRM-ESM2-1","GISS-E2-1-G","IPSL-CM6A-LR","MRI-ESM2-0")

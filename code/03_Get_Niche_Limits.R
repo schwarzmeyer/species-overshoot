@@ -1,5 +1,5 @@
 # code to compute upper and lowet thermal niche limits for each species
-
+ 
 # load files
 spp_files <- list.files(here("processed_data/species_data/range_maps_grid_cells"), full.names = T)
 spp_names <- list.files(here("processed_data/species_data/range_maps_grid_cells"), full.names = F)

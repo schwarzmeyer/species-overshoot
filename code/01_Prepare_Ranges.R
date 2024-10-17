@@ -6,7 +6,7 @@ ocean_grid <- readRDS(here("raw_data/spatial_data/ocean_grid_equal_area.rds"))
 # returning a list where each element is a species, and the values indicate 
 # the grid cells that intersected with the grid.
 prepare_range <- function(range_data, grid, realm){
-  
+   
   
   # filter presence (extant), origin (native and reintroduced), and seasonal (resident and breeding)
   range_filtered <- range_data %>%

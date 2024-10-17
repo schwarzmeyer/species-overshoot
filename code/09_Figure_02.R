@@ -1,4 +1,4 @@
-
+ 
 amph <- read_csv2(here("processed_data/species_data/attribute_tables/Amphibians.csv"))
 bird <- read_csv2(here("processed_data/species_data/attribute_tables/Birds.csv"))
 mamm <- read_csv2(here("processed_data/species_data/attribute_tables/Mammals.csv"))

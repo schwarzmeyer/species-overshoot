@@ -2,7 +2,7 @@
 # Raw results are matrices in which rows represent the species occurring in an assemblage (i.e. grid cell)
 # and columns are the years in the time series. The cell is assigned with 1 if the climate is suitable
 # for the species in a given year. The cell is assigned with 0 if the climate is unsuitable.
-
+ 
 spp_ranges <- list.files(here("processed_data/species_data/range_maps_grid_cells"), full.names = T)
 spp_names <- list.files(here("processed_data/species_data/range_maps_grid_cells"), full.names = F)
 

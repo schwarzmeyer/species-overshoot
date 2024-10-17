@@ -8,12 +8,6 @@ if(!requireNamespace("pacman", quietly = TRUE)) install.packages("pacman")
 
 pacman::p_load(colorspace, exactextractr, furrr, ggdist, 
                ggthemes, here, parallel, patchwork, pbapply, 
-<<<<<<< HEAD
-               readxl, rlang, rnaturalearth, rphylopic, sf, terra, 
-               tidyverse, zoo)
-=======
                phyloregion, phytools, readxl, rlang, rnaturalearth, rphylopic, 
                sf, terra, tidyverse, zoo)
->>>>>>> 9cd41c2 (.)
-
 
