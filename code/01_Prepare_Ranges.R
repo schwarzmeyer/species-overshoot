@@ -1,7 +1,7 @@
 # load grid
 terrestrial_grid <- readRDS(here("raw_data/spatial_data/terrestrial_grid_equal_area.rds"))
 ocean_grid <- readRDS(here("raw_data/spatial_data/ocean_grid_equal_area.rds"))
-
+ 
 # this function intersects IUCN shapefiles with our 100 km grid,
 # returning a list where each element is a species, and the values indicate 
 # the grid cells that intersected with the grid.
