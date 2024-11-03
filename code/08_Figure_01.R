@@ -37,7 +37,7 @@ p1 <-  ggplot(data_median, aes(x = range_exposed*100)) +
   coord_cartesian(clip = "off", ylim = c(-3000,9000)) +
   theme_tidybayes() +
   theme(legend.position = "none",
-        plot.margin = margin(t = 0, b = 15, l = 20, r = 20)); p1
+        plot.margin = margin(t = 0, b = 15, l = 20, r = 20))
 
 
 
@@ -53,7 +53,7 @@ p2 <- ggplot(data_median, aes(x = mean_local_duration)) +
     coord_cartesian(clip = "off", ylim = c(-2300,6000)) +
     theme_tidybayes() +
     theme(legend.position = "none",
-        plot.margin = margin(t = 15, b = 0, l = 20, r = 20)); p2
+        plot.margin = margin(t = 15, b = 0, l = 20, r = 20))
 
 
 
@@ -127,13 +127,10 @@ grid_land <- left_join(grid_land, data_land, by = "WorldID")
 grid_ocean <- left_join(grid_ocean, data_ocean, by = "WorldID")
 
 
-
-
-
-grid_ocean <- grid_ocean %>% 
+grid_ocean_perc <- grid_ocean %>% 
   mutate(spp_risk_perc = ifelse(spp_risk_perc <= 1, NA, spp_risk_perc))
 
-grid_land <- grid_land %>% 
+grid_land_perc <- grid_land %>% 
   mutate(spp_risk_perc = ifelse(spp_risk_perc <= 1, NA, spp_risk_perc))
 
 
@@ -141,17 +138,49 @@ grid_land <- grid_land %>%
 bks <- c(1,5,10,20,30,40,65)
   
 
-pmap_perc <- ggplot() +
+ggplot() +
   geom_sf(data = bound, colour = NA, fill = "grey91") +
   geom_sf(data = countries, colour = NA, fill = "grey73",  linewidth = 0.2) +
-  geom_sf(data = grid_ocean, aes(fill = spp_risk_perc, colour = spp_risk_perc), show.legend = T) +
-  geom_sf(data = grid_land, aes(fill = spp_risk_perc, colour = spp_risk_perc), show.legend = T) +
+  geom_sf(data = grid_ocean_perc, aes(fill = spp_risk_perc, colour = spp_risk_perc), show.legend = T) +
+  # geom_sf(data = grid_land_perc, aes(fill = spp_risk_perc, colour = spp_risk_perc), show.legend = T) +
   geom_sf(data = countries, colour = "grey22", fill = NA,  linewidth = 0.3) +
   geom_sf(data = bound, colour = "grey22", fill = NA, linewidth = 0.5) +
-  scale_fill_viridis_b(option = "C", direction = 1, breaks = bks, name = "% of species at high risk",
+  scale_fill_viridis_b(option = "C", direction = 1, breaks = bks, name = "% of species at risk of global extinction",
                        end = 0.98, begin = 0.27, na.value = NA, limits = c(1,max(bks))) +
-  scale_colour_viridis_b(option = "C", direction = 1, breaks = bks, name = "% of species at high risk",
+  scale_colour_viridis_b(option = "C", direction = 1, breaks = bks, name = "% of species at risk of global extinction",
                          end = 0.98, begin = 0.27, na.value = NA, limits = c(1,max(bks))) +
+  # coord_sf(ylim = c(-5500000,8000000)) +
+  theme_map() +
+  theme(legend.position.inside = c(0.28,0.98),
+        legend.direction = "horizontal",
+        plot.margin = margin(t=20,0,0,0),
+        legend.title = element_text(size = 12),
+        legend.text = element_text(size = 10)) +
+  guides(fill = guide_colorsteps(title.position = 'top',
+                                 title.hjust = .5, 
+                                 barwidth = unit(18, 'lines'), barheight = unit(.65, 'lines')))
+
+
+grid_ocean <- grid_ocean %>% 
+  mutate(spp_risk = ifelse(spp_risk <= 1, NA, spp_risk))
+
+grid_land <- grid_land %>% 
+  mutate(spp_risk = ifelse(spp_risk <= 1, NA, spp_risk))
+
+
+bks2 <- c(5,10,25,50,75,100,234)
+
+pmap <- ggplot() +
+  geom_sf(data = bound, colour = NA, fill = "grey91") +
+  geom_sf(data = countries, colour = NA, fill = "grey73",  linewidth = 0.2) +
+  geom_sf(data = grid_ocean, aes(fill = spp_risk), colour = NA, show.legend = T) +
+  geom_sf(data = grid_land, aes(fill = spp_risk), colour = NA, show.legend = T) +
+  geom_sf(data = countries, colour = "grey22", fill = NA,  linewidth = 0.3) +
+  geom_sf(data = bound, colour = "grey22", fill = NA, linewidth = 0.5) +
+  scale_fill_viridis_b(option = "C", direction = 1, breaks = bks2, name = "Number of species at risk of global extinction",
+                       end = 0.98, begin = 0.27, na.value = NA, limits = c(min(bks2),max(bks2))) +
+  # scale_colour_viridis_b(option = "C", direction = 1, breaks = bks2, name = "% of species at risk of global extinction",
+  #                        end = 0.98, begin = 0.27, na.value = NA, limits = c(1,max(bks2))) +
   # coord_sf(ylim = c(-5500000,8000000)) +
   theme_map() +
   theme(legend.position.inside = c(0.28,0.98),
@@ -199,7 +228,7 @@ p3 <- data_median %>%
   
 
 
-pp <- (((p1 / p2)  | p3 ) + plot_layout(widths = c(0.6,1))) / pmap_perc + 
+pp <- (((p1 / p2)  | p3 ) + plot_layout(widths = c(0.6,1))) / pmap + 
   plot_layout(heights = c(1,2)) &
   plot_annotation(tag_levels = "a") &
   theme(plot.tag = element_text(face = "bold", size = 12, margin = margin(r = 10)),

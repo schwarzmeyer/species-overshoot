@@ -12,7 +12,7 @@ rept <- select(rept, sci_name, category)
 fish <- select(fish, sci_name, category)
 
 
-birds_cat <- readxl::read_excel(here("raw_data/species_data/range_maps_iucn/BIRDS/HBW-BirdLife_Checklist_v6b_Jul22/Handbook of the Birds of the World and BirdLife International Digital Checklist of the Birds of the World_Version_6b.xlsx"))
+birds_cat <- read_excel(here("raw_data/species_data/range_maps_iucn/BIRDS/HBW-BirdLife_Checklist_v6b_Jul22/Handbook of the Birds of the World and BirdLife International Digital Checklist of the Birds of the World_Version_6b.xlsx"))
 colnames(birds_cat) <- birds_cat[2,]
 
 birds_cat <- birds_cat %>% 
@@ -48,7 +48,7 @@ p1 <- data_iucn %>%
     width = .35, 
     outlier.shape = NA,
     show.legend = F,
-    alpha = 0,
+    alpha = 0.3,
     linewidth = 0.5
   ) +
   labs(x = "", y = "Range exposed (%)", title = "") +
@@ -74,18 +74,11 @@ p2 <- data_iucn %>%
     justification = -.55,
     point_colour = NA,
     show.legend = F) + 
-  # geom_point(
-  #   aes(colour = category),
-  #   size = 1.1,
-  #   alpha = 0.01,
-  #   position = position_jitter(seed = 1, width = .1),
-  #   show.legend = F
-  # ) + 
   geom_boxplot(
     width = .35, 
     outlier.shape = NA,
     show.legend = F,
-    alpha = 0,
+    alpha = 0.3,
     linewidth = 0.5
   ) +
   labs(x = "", y = "Duration (years)", title = "") +
