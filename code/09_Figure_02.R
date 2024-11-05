@@ -58,7 +58,7 @@ p1 <- data_iucn %>%
                                       amount = 0.08)) +
   theme_tidybayes() +
   scale_y_continuous(expand = c(0,0)) +
-  theme(axis.text = element_text(size = 9)); p1
+  theme(axis.text = element_text(size = 9))
 
 
 p2 <- data_iucn %>% 
@@ -88,13 +88,15 @@ p2 <- data_iucn %>%
                                       amount = 0.08)) +
   theme_tidybayes() +
   scale_y_continuous(expand = c(0,0)) +
-  theme(axis.text = element_text(size = 9)); p2
+  theme(axis.text = element_text(size = 9))
 
-p <- p1 + p2 + plot_layout(ncol = 1) +
-  plot_annotation(tag_levels = "a") &
-  theme(plot.tag = element_text(size = 9.5, face = "bold"))
 
+pp <- plot_grid(p1, p2, ncol = 1, 
+                labels = "auto", 
+                label_size = 10, 
+                label_x = 0.02,
+                scale = 0.95)
 
 ggsave(here("figures/Fig_02.jpg"),
-       p,
+       pp,
        width = 8.9, height = 15, units = "cm", dpi = 700)

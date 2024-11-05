@@ -105,11 +105,12 @@ for(i in seq_along(models)){
       res_final <- res_final %>% 
         bind_rows() %>% 
         na.omit() %>% 
-        mutate(group = groups[j]) %>% 
-        relocate(group)
+        mutate(group = groups[j],
+               model = models[i]) %>% 
+        relocate(group) 
         
       saveRDS(res_final,
-              file = here("results/species_exposure_dates", paste0("raw_",groups[j],"_",models[i],".rds")))
+              file = here("results/species_exposure_times", paste0("raw_",groups[j],"_",models[i],".rds")))
       
   }
 }

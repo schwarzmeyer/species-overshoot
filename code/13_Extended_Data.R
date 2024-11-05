@@ -173,6 +173,7 @@ p <- wrap_plots(
   theme(legend.position = "bottom",
         legend.text = element_text(size = 9.5))
 
+p
 
 ggsave(here("figures/Extended_data_X.jpg"),
        p,
@@ -180,44 +181,52 @@ ggsave(here("figures/Extended_data_X.jpg"),
 
 
 
-
 p2 <- map(models, function(x){
   
-  x_title <- ifelse(x == "GISS-E2-1-G", "Additional cooling needed for de-exposure (°C)", "")
-  
+  x_title <- ifelse(x == "MRI-ESM2-0", "Additional cooling needed for de-exposure (°C)", "")
+  phylo_x <- 0.01
+  phylo_color <- "#FF8C00"
   data %>% 
+    mutate(group = factor(group, levels = rev(c("Amphibians", "Birds", "Mammals", "Reptiles", "Fishes")))) %>% 
     filter(overshoot_phase %in% c("warming_phase", "cooling_phase"),
            code == "more_cooling",
            model == x) %>% 
-    ggplot(aes(y = 1, x = gwl_diff, fill = "", colour = "")) +
+    ggplot(aes(y = group, x = gwl_diff, fill = "", colour = "")) +
     ggdist::stat_halfeye(
-      adjust = 1, 
+      adjust = 0.3, 
       width = 1, 
       .width = 0, 
       justification = -.4,
       point_colour = NA,
       show.legend = F) + 
     geom_boxplot(
-      width = .4, 
+      width = .3, 
       outlier.shape = NA,
       show.legend = F,
       alpha = 0.4,
-      linewidth = 0.5
+      linewidth = 0.3
     ) +
-    labs(x = x_title, y = "") +
+    add_phylopic(uuid = "bd80bc51-460c-4dd9-8341-e5b460372efb", fill = phylo_color,
+                 x = phylo_x, y = 5, height = 0.6, alpha = 1) +    
+    add_phylopic(uuid = "157d3109-7124-413c-8362-3abcc6889a3f", fill = phylo_color,
+                 x = phylo_x, y = 4, height = 0.75, alpha = 1) +   
+    add_phylopic(uuid = "1e606dbc-f881-4bd7-aaa5-01130f1fc6cc", fill = phylo_color,
+                 x = phylo_x, y = 3, height = 0.75, alpha = 1) +   
+    add_phylopic(uuid = "264fa655-afd7-451c-8f27-e0a9557376e6", fill = phylo_color,
+                 x = phylo_x, y = 2, height = 0.78, alpha = 1) +   
+    add_phylopic(uuid = "c90aa49b-d9c5-44a4-a709-4f8d9a33b559", fill = phylo_color,
+                 x = phylo_x, y = 1, height = 0.42, alpha = 1) + 
+    labs(x = x_title, y = x) +
     scale_fill_manual(values = "#FF8C00") +
     scale_colour_manual(values = "#FF8C00") +
-    scale_x_reverse(limits = c(0, -0.8), expand = c(0,0)) +
-    ylim(c(0.6 ,3.2)) +
+    scale_x_reverse(limits = c(0.05, -0.9), expand = c(0,0)) +
     theme_tidybayes() +
     theme(panel.grid.major = element_blank(),
           panel.grid.minor = element_blank(),
-          axis.title.x = element_text(size = 11, vjust = -3),
+          axis.title.x = element_text(size = 11, vjust = -1),
           axis.text.x = element_text(size = 9.5),
-          axis.text.y = element_blank(),
-          axis.line.y = element_blank(),
-          axis.ticks.y = element_blank(),
-          plot.margin = margin(t = 0.3, b = 0.1, r = 0, l= 0,  unit = "cm"),
+          axis.title.y = element_text(size = 10, vjust = 3),
+          plot.margin = margin(t = 0, b = 0.1, l = 0.5 , r = 1, unit = "cm"),
           panel.background = element_blank(),
           plot.background = element_blank(),
           strip.background = element_blank())
@@ -225,9 +234,16 @@ p2 <- map(models, function(x){
 })
 
 
-# ggsave(here("figures/test.jpg"),
-#        p,
-#        width = 21, height = 7.5, units = "cm", dpi = 500)
+pp <- wrap_plots(
+  p2, ncol = 1) +
+  plot_layout(guides = "collect") &
+  theme(legend.position = "bottom",
+        legend.text = element_text(size = 9.5))
+
+ggsave(here("figures/Extended_data_03.jpg"),
+       pp,
+       width = 14, height = 22, units = "cm", dpi = 700)
+
 
 
 
@@ -280,7 +296,7 @@ viridis_begin <- 0.2
 
 fill_columns <- c("less_cooling", "never", "more_cooling")
 
-p_map <- map(fill_columns, function(x){
+p_map_land <- map(fill_columns, function(x){
   
   title_colour <- darken(ifelse(x == "less_cooling", "#77a9d0",
                          ifelse(x == "never", "#DC143C","#FF8C00")), amount = 0.18)
@@ -291,72 +307,74 @@ p_map <- map(fill_columns, function(x){
   
   
   ggplot() +
-    geom_sf(data = bound, colour = NA, fill = "grey92") +
     geom_sf(data = countries, colour = NA, fill = "grey78",  linewidth = 0.15) +
-    geom_sf(data = grid_ocean_join, aes(fill = !!sym(x)), colour = NA, show.legend = T) +
+    # geom_sf(data = grid_ocean_join, aes(fill = !!sym(x)), colour = NA, show.legend = T) +
     geom_sf(data = grid_land_join, aes(fill = !!sym(x)), colour = NA, show.legend = T) +
     geom_sf(data = countries, colour = "grey11", fill = NA,  linewidth = 0.15) +
-    geom_sf(data = bound, colour = title_colour, fill = NA, linewidth = 0.3) +
-    scale_fill_viridis_b(option = "B", direction = 1, breaks = bks, name = "N. of species",
+    scale_fill_viridis_b(option = "D", direction = 1, breaks = bks, name = "N. of species",
                          end = 1, begin = viridis_begin, na.value = NA) +
-    # scale_colour_viridis_b(option = "B", direction = 1, breaks = bks, name = "N. of species",
-    #                        end = 1, begin = viridis_begin, na.value = NA) +
+    coord_sf(ylim = c(-5500000,8000000)) +
     labs(subtitle = plot_title) +
-    theme_map() +
-    theme(legend.position = "bottom",
+    ggthemes::theme_map() +
+    theme(legend.position.inside = c(0.28, -0.35),
           legend.direction = "horizontal",
-          plot.margin = margin(t = 0.6, unit = "cm"),
-          legend.title = element_text(size = 11),
+          plot.margin = margin(t = 0, b = 0.5, unit = "cm"),
+          legend.title = element_text(size = 9),
           legend.text = element_text(size = 8),
-          plot.subtitle = element_text(size = 11, hjust = 0.5, vjust = -1, colour = title_colour)) +
+          plot.subtitle = element_text(size = 11, hjust = 0.5, vjust = 1, colour = title_colour)) +
     guides(fill = guide_colorsteps(title.position = 'top',
-                                   title.hjust = .5, 
-                                   barwidth = unit(9, 'lines'), 
-                                   barheight = unit(.4, 'lines')))
+                                   title.hjust = .5,
+                                   barwidth = unit(8, 'lines'),
+                                   barheight = unit(.35, 'lines')))
+  
+  
+})
+
+
+
+p_map_ocean <- map(fill_columns, function(x){
+  
+  title_colour <- darken(ifelse(x == "less_cooling", "#77a9d0",
+                                ifelse(x == "never", "#DC143C","#FF8C00")), amount = 0.18)
+  
+  plot_title <- ifelse(x == "less_cooling", "Additional cooling was not needed",
+                       ifelse(x == "never", "No de-exposure","De-exposure needed additional cooling"))
+  
+  
+  
+  ggplot() +
+    geom_sf(data = countries, colour = NA, fill = "grey78",  linewidth = 0.15) +
+    geom_sf(data = grid_ocean_join, aes(fill = !!sym(x)), colour = NA, show.legend = T) +
+    # geom_sf(data = grid_land_join, aes(fill = !!sym(x)), colour = NA, show.legend = T) +
+    geom_sf(data = countries, colour = "grey11", fill = NA,  linewidth = 0.15) +
+    scale_fill_viridis_b(option = "D", direction = 1, breaks = bks, name = "N. of species",
+                         end = 1, begin = viridis_begin, na.value = NA) +
+    coord_sf(ylim = c(-5500000,8000000)) +
+    labs(subtitle = plot_title) +
+    ggthemes::theme_map() +
+    theme(legend.position.inside = c(0.28, -0.35),
+          legend.direction = "horizontal",
+          plot.margin = margin(t = 0, b = 0.5, unit = "cm"),
+          legend.title = element_text(size = 9),
+          legend.text = element_text(size = 8),
+          plot.subtitle = element_text(size = 11, hjust = 0.5, vjust = 1, colour = title_colour)) +
+    guides(fill = guide_colorsteps(title.position = 'top',
+                                   title.hjust = .5,
+                                   barwidth = unit(8, 'lines'),
+                                   barheight = unit(.35, 'lines')))
   
   
   
 })
 
- 
-
- 
-
-p <- wrap_elements(
-  p1[[1]] + plot_spacer() + p2[[1]] + 
-    p1[[2]] + plot_spacer() + p2[[2]] +
-    p1[[3]] + plot_spacer() + p2[[3]] + 
-    p1[[4]] + plot_spacer() + p2[[4]] + 
-    p1[[5]] + plot_spacer() + p2[[5]] +
-    plot_layout(ncol = 5, byrow = F, heights = c(1.4,-0.54, 0.65), 
-                guides = "collect") +
-    plot_annotation(title = "a") &
-    theme(legend.position = "top",
-          legend.key.size = unit(0.4, "cm"),
-          legend.text = element_text(size = 10),
-          legend.margin = margin(b = 0.8, t = -0.8, unit = "cm"),
-          plot.title = element_text(size = 13, face = "bold", vjust = 5))) 
 
 
-p
-p_maps <- wrap_elements(
-  (p_map[[1]] + p_map[[2]]) / plot_spacer() / p_map[[3]] +
-    plot_layout(guides = "collect", heights = c(1.05, -0.17, 1.2)) +
-    plot_annotation(title = "b") &
-    theme(legend.position = "bottom",
-          plot.title = element_text(size = 13, face = "bold", vjust = -5)) &
-    guides(fill = guide_colorsteps(title.position = "top",
-                                   title.hjust = 0.5,
-                                   barwidth = unit(15, 'lines'), 
-                                   barheight = unit(.5, 'lines'))))
-  
 
-  
-p_final <- p / p_maps + 
-  plot_layout(heights = c(0.5, 1), guides = "collect")
+ppp <- plot_grid(plotlist = c(p_map_ocean, p_map_land), ncol = 2, byrow = F) 
 
-ggsave(here("figures/Fig_04.jpg"),
-       p_final,
-       width = 21, height = 24, units = "cm", dpi = 700)
+
+ggsave(here("figures/Extended_data_04.jpg"),
+       ppp,
+       width = 21, height = 21, units = "cm", dpi = 700)
 
 

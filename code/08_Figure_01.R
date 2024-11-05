@@ -18,8 +18,10 @@ countries <- st_transform(ne_countries(returnclass = "sf"), "+proj=robin")
 bound <- readRDS(here("raw_data/random/bbox.rds"))
 
 
-qrange <- 0.5
+qrange <- 0.8
 qduration <- 100
+
+theme_colour <- lighten("#150f35", 0.1)
 
 median_qrange <- median(data_median$range_exposed)
 median_qduration <- median(data_median$mean_local_duration)
@@ -27,38 +29,37 @@ median_qduration <- median(data_median$mean_local_duration)
 p1 <-  ggplot(data_median, aes(x = range_exposed*100)) +
   geom_histogram(aes(fill = range_exposed*100 >= qrange*100), binwidth = 5, boundary = 0, colour = "white") +
   geom_boxplot(aes(y = -1700), width = 1400) +
-  scale_fill_manual(values = c("grey73","#99269c")) +
+  scale_fill_manual(values = c("grey73",theme_colour)) +
   labs(y = "N. of species", x = "Range exposed (%)") +
   scale_y_continuous(breaks = c(0,3000,6000,9000)) +
-  # scale_x_continuous(breaks = seq(0,100, length.out = 24)) +
-  annotate("segment", x = median_qrange*100, xend = median_qrange*100, y = 30, yend = 7500, color = "black", linewidth = 0.8, 
-           linetype = 2) +
-  annotate("text", x = median_qrange*100, y = 8700, label = "32%", color = "black", fontface = 2, size = 3.2) +
+  # annotate("segment", x = median_qrange*100, xend = median_qrange*100, y = 30, yend = 7500, color = "black", linewidth = 0.8, 
+  #          linetype = 2) +
+  # annotate("text", x = median_qrange*100, y = 8700, label = "32%", color = "black", fontface = 2, size = 3.2) +
   coord_cartesian(clip = "off", ylim = c(-3000,9000)) +
   theme_tidybayes() +
   theme(legend.position = "none",
-        plot.margin = margin(t = 0, b = 15, l = 20, r = 20))
+        plot.margin = margin(t = 10, b = 0, l = 30, r = 15))
 
 
 
 p2 <- ggplot(data_median, aes(x = mean_local_duration)) +
     geom_histogram(aes(fill = mean_local_duration >= qduration),  binwidth = 10, boundary = 0, closed = "left", position = "identity", colour = "white") +
     geom_boxplot(aes(y = -1600), width = 1000, outlier.color = NA) +
-    scale_fill_manual(values = c("grey73","#99269c")) +
+    scale_fill_manual(values = c("grey73",theme_colour)) +
     labs(y = "N. of species", x = "Duration (years)") +
     scale_y_continuous(breaks = c(0,2000,4000,6000)) +
-    annotate("segment", x = median_qduration, xend = median_qduration, y = 30, yend = 6000, color = "black", linewidth = 0.8, 
-           linetype = 2) +
-    annotate("text", x = 119, y = 7100, label = "109 years", color = "black", fontface = 2, size = 3.2) +
+    # annotate("segment", x = median_qduration, xend = median_qduration, y = 30, yend = 6000, color = "grey40", linewidth = 0.8, 
+    #        linetype = 2) +
+    # annotate("text", x = 119, y = 7100, label = "109 years", color = "black", fontface = 2, size = 3.2) +
     coord_cartesian(clip = "off", ylim = c(-2300,6000)) +
     theme_tidybayes() +
     theme(legend.position = "none",
-        plot.margin = margin(t = 15, b = 0, l = 20, r = 20))
+        plot.margin = margin(t = 25, b = -20, l = 30, r = 15))
 
 
 
 
-risk_spp <- data_median %>% 
+risk_spp <- data_median %>%
   filter(range_exposed >= qrange,
          mean_local_duration >= qduration) %>% 
   pull(species)
@@ -127,38 +128,38 @@ grid_land <- left_join(grid_land, data_land, by = "WorldID")
 grid_ocean <- left_join(grid_ocean, data_ocean, by = "WorldID")
 
 
-grid_ocean_perc <- grid_ocean %>% 
-  mutate(spp_risk_perc = ifelse(spp_risk_perc <= 1, NA, spp_risk_perc))
-
-grid_land_perc <- grid_land %>% 
-  mutate(spp_risk_perc = ifelse(spp_risk_perc <= 1, NA, spp_risk_perc))
-
-
-
-bks <- c(1,5,10,20,30,40,65)
-  
-
-ggplot() +
-  geom_sf(data = bound, colour = NA, fill = "grey91") +
-  geom_sf(data = countries, colour = NA, fill = "grey73",  linewidth = 0.2) +
-  geom_sf(data = grid_ocean_perc, aes(fill = spp_risk_perc, colour = spp_risk_perc), show.legend = T) +
-  # geom_sf(data = grid_land_perc, aes(fill = spp_risk_perc, colour = spp_risk_perc), show.legend = T) +
-  geom_sf(data = countries, colour = "grey22", fill = NA,  linewidth = 0.3) +
-  geom_sf(data = bound, colour = "grey22", fill = NA, linewidth = 0.5) +
-  scale_fill_viridis_b(option = "C", direction = 1, breaks = bks, name = "% of species at risk of global extinction",
-                       end = 0.98, begin = 0.27, na.value = NA, limits = c(1,max(bks))) +
-  scale_colour_viridis_b(option = "C", direction = 1, breaks = bks, name = "% of species at risk of global extinction",
-                         end = 0.98, begin = 0.27, na.value = NA, limits = c(1,max(bks))) +
-  # coord_sf(ylim = c(-5500000,8000000)) +
-  theme_map() +
-  theme(legend.position.inside = c(0.28,0.98),
-        legend.direction = "horizontal",
-        plot.margin = margin(t=20,0,0,0),
-        legend.title = element_text(size = 12),
-        legend.text = element_text(size = 10)) +
-  guides(fill = guide_colorsteps(title.position = 'top',
-                                 title.hjust = .5, 
-                                 barwidth = unit(18, 'lines'), barheight = unit(.65, 'lines')))
+# grid_ocean_perc <- grid_ocean %>% 
+#   mutate(spp_risk_perc = ifelse(spp_risk_perc <= 1, NA, spp_risk_perc))
+# 
+# grid_land_perc <- grid_land %>% 
+#   mutate(spp_risk_perc = ifelse(spp_risk_perc <= 1, NA, spp_risk_perc))
+# 
+# 
+# 
+# bks <- c(1,2, 5,10,20,30,40,65)
+#   
+# 
+# ggplot() +
+#   geom_sf(data = bound, colour = NA, fill = "grey91") +
+#   geom_sf(data = countries, colour = NA, fill = "grey73",  linewidth = 0.2) +
+#   geom_sf(data = grid_ocean_perc, aes(fill = spp_risk_perc, colour = spp_risk_perc), show.legend = T) +
+#   geom_sf(data = grid_land_perc, aes(fill = spp_risk_perc, colour = spp_risk_perc), show.legend = T) +
+#   geom_sf(data = countries, colour = "grey22", fill = NA,  linewidth = 0.3) +
+#   geom_sf(data = bound, colour = "grey22", fill = NA, linewidth = 0.5) +
+#   scale_fill_viridis_b(option = "C", direction = 1, breaks = bks, name = "% of species at risk of global extinction",
+#                        end = 0.98, begin = 0.27, na.value = NA, limits = c(min(bks),max(bks))) +
+#   scale_colour_viridis_b(option = "C", direction = 1, breaks = bks, name = "% of species at risk of global extinction",
+#                          end = 0.98, begin = 0.27, na.value = NA, limits = c(min(bks),max(bks))) +
+#   # coord_sf(ylim = c(-5500000,8000000)) +
+#   theme_map() +
+#   theme(legend.position.inside = c(0.28,0.98),
+#         legend.direction = "horizontal",
+#         plot.margin = margin(t=20,0,0,0),
+#         legend.title = element_text(size = 12),
+#         legend.text = element_text(size = 10)) +
+#   guides(fill = guide_colorsteps(title.position = 'top',
+#                                  title.hjust = .5, 
+#                                  barwidth = unit(18, 'lines'), barheight = unit(.65, 'lines')))
 
 
 grid_ocean <- grid_ocean %>% 
@@ -168,24 +169,22 @@ grid_land <- grid_land %>%
   mutate(spp_risk = ifelse(spp_risk <= 1, NA, spp_risk))
 
 
-bks2 <- c(5,10,25,50,75,100,234)
+bks2 <- c(1,5,10,15,20,30,50,204)
+
 
 pmap <- ggplot() +
-  geom_sf(data = bound, colour = NA, fill = "grey91") +
-  geom_sf(data = countries, colour = NA, fill = "grey73",  linewidth = 0.2) +
+  geom_sf(data = countries, colour = NA, fill = "#150f36",  linewidth = 0.2) +
   geom_sf(data = grid_ocean, aes(fill = spp_risk), colour = NA, show.legend = T) +
   geom_sf(data = grid_land, aes(fill = spp_risk), colour = NA, show.legend = T) +
-  geom_sf(data = countries, colour = "grey22", fill = NA,  linewidth = 0.3) +
-  geom_sf(data = bound, colour = "grey22", fill = NA, linewidth = 0.5) +
-  scale_fill_viridis_b(option = "C", direction = 1, breaks = bks2, name = "Number of species at risk of global extinction",
-                       end = 0.98, begin = 0.27, na.value = NA, limits = c(min(bks2),max(bks2))) +
-  # scale_colour_viridis_b(option = "C", direction = 1, breaks = bks2, name = "% of species at risk of global extinction",
-  #                        end = 0.98, begin = 0.27, na.value = NA, limits = c(1,max(bks2))) +
-  # coord_sf(ylim = c(-5500000,8000000)) +
+  geom_sf(data = countries, colour = "grey", fill = NA,  linewidth = 0.25) +
+  scale_fill_viridis_b(option = "A", direction = 1, breaks = bks2, 
+                       name = "Number of species at risk of global extinction",
+                       end = 0.96, begin = 0.2, na.value = NA, limits = c(min(bks2),max(bks2))) +
+  coord_sf(ylim = c(-5500000,8000000)) +
   theme_map() +
-  theme(legend.position.inside = c(0.28,0.98),
+  theme(legend.position.inside = c(0.28,1.05),
         legend.direction = "horizontal",
-        plot.margin = margin(t=20,0,0,0),
+        plot.margin = margin(t = 100, b = 0, l = 0, r = 0),
         legend.title = element_text(size = 12),
         legend.text = element_text(size = 10)) +
   guides(fill = guide_colorsteps(title.position = 'top',
@@ -201,6 +200,9 @@ richness <- tibble(group = c("Amphibians", "Birds", "Fishes", "Mammals", "Reptil
                                 length(unique(names(fish))),
                                 length(unique(names(mamm))),
                                 length(unique(names(rept)))))
+
+phylo_color <- theme_colour
+
 p3 <- data_median %>% 
   filter(species %in% risk_spp) %>% 
   count(group, name = "exposed") %>% 
@@ -212,32 +214,46 @@ p3 <- data_median %>%
   # mutate(group = factor(group, levels = rev(c("Amphibians","Reptiles","Mammals","Birds","Fishes")))) %>%
   ggplot(aes(x = value, y = group, fill = fct_rev(name))) +
   geom_col(position = "stack", width = 0.72) +
-  scale_fill_manual(values = c("grey73", "#99269c")) +
-  scale_x_continuous(limits = c(0,11000), breaks = c(0,2500,5000,7500,10000), expand = c(0,0)) +
+  scale_fill_manual(values = c("grey73", theme_colour)) +
+  scale_x_continuous(limits = c(0,11500), breaks = c(0,2500,5000,7500,10000), expand = c(0,0)) +
+  coord_cartesian(clip = "off") +
   labs(x = "No. of species", y = "") +
   theme_tidybayes() +
-  geom_text(aes(label = paste0(round(perc, 0), "%")),
-            position = position_stack(vjust = 0.5), colour = rep(c("white","black"), 5), fontface = 2, size = 2.8, family = "Tahoma") +
+  geom_text(aes(label = paste0("           ", round(perc, 0), "%")),
+            position = position_stack(vjust = 1), colour = rep(c(theme_colour,NA), 5), 
+            fontface = 2, size = 3, family = "Tahoma") +
+  add_phylopic(uuid = "264fa655-afd7-451c-8f27-e0a9557376e6", fill = phylo_color,
+               x = 10500, y = 5, height = 0.78, alpha = 1) +  
+  add_phylopic(uuid = "bd80bc51-460c-4dd9-8341-e5b460372efb", fill = phylo_color,
+               x = 7800, y = 4, height = 0.6, alpha = 1) +   
+  add_phylopic(uuid = "157d3109-7124-413c-8362-3abcc6889a3f", fill = phylo_color,
+               x = 11500, y = 3, height = 0.7, alpha = 1) +   
+  add_phylopic(uuid = "1e606dbc-f881-4bd7-aaa5-01130f1fc6cc", fill = phylo_color,
+               x = 6400, y = 2, height = 0.75, alpha = 1) +   
+  add_phylopic(uuid = "c90aa49b-d9c5-44a4-a709-4f8d9a33b559", fill = phylo_color,
+               x = 5100, y = 1, height = 0.42, alpha = 1) +   
   theme(plot.title = element_text(hjust = 0.5, family = "Tahoma"),
         plot.subtitle = element_text(hjust = 0.5, family = "Tahoma"),
         legend.text = element_text(family = "Tahoma"),
-        plot.margin = margin(b = 0, l = 0, r = 15),
+        plot.margin = margin(b = -17, l = 0, r = 25, t = 15),
         legend.position = "none",
         axis.text.y = element_text(size = 10),
-        axis.line.y = element_blank());
+        axis.line.y = element_blank())
   
 
 
-pp <- (((p1 / p2)  | p3 ) + plot_layout(widths = c(0.6,1))) / pmap + 
-  plot_layout(heights = c(1,2)) &
-  plot_annotation(tag_levels = "a") &
-  theme(plot.tag = element_text(face = "bold", size = 12, margin = margin(r = 10)),
-        plot.tag.position = "topleft")
+pp <- plot_grid(
+  plot_grid(
+    plot_grid(p1, p2, ncol = 1),
+    p3, ncol = 2, rel_widths = c(0.75, 1), scale = 0.95),
+  pmap, ncol = 1,  rel_heights = c(1,2)) +
+  draw_plot_label(letters[1:4],
+                  c(0.01,0.01,0.45,0.01),
+                  c(1,0.8,1,0.55),
+                  size = 12)
 
+pp
 
 ggsave(here("figures/Fig_01.jpg"),
        pp,
-       width = 24, height = 25, units = "cm", dpi = 700)
-
-
-
+       width = 24, height = 22, units = "cm", dpi = 500)

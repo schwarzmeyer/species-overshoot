@@ -1,26 +1,7 @@
-files <- list.files(here("results/species_exposure_dates"), pattern = "raw", full.names = T)
+files <- list.files(here("results/species_exposure_times"), full.names = T)
 models <- c("CanESM5","CNRM-ESM2-1","GISS-E2-1-G","IPSL-CM6A-LR","MRI-ESM2-0")
 
-# prepare data frames 
-res_final <- list()
-
-for(i in seq_along(models)){
-  
-  res_list <- list()
-  files_tmp <- grep(models[i], files, value = T)
-  
-  for(j in seq_along(files_tmp)){
-    
-    tmp <- readRDS(files_tmp[j])
-    tmp$model <- models[i]
-    res_list[[j]] <- tmp 
-  }
-  
-  res_final[[i]] <- bind_rows(res_list)
-  
-}
-
-data_raw <- bind_rows(res_final) 
+data_raw <- bind_rows(map(files, readRDS))
 
 # calculate pre-industrial averages for each model
 global_temp_avg <- readRDS(here("processed_data/climate_data/global_averages/global_averages.rds"))
@@ -40,11 +21,10 @@ gwl <- global_temp_roll %>%
   select(-pre_industrial_avg, -temperature)
 
 
-
-
 # binding the lowest temp data to the main data
 # gwl_diff the difference in temperature at exposure and deexposure
 # if the value is negative, deexposure required further cooling
+
 data <- data_raw %>% 
   left_join(gwl, by = c("model", "exposure" = "year")) %>% 
   rename("gwl_exposure" = gwl) %>% 
@@ -85,102 +65,13 @@ year_OS_starts <- gwl %>%
 code_df <- left_join(year_OS_starts, year_peak_warming, by = "model") %>% 
   select(-c(gwl_os, gwl_low))
 
-###########################################
-# Figure S1
-
-gwl_s1 <- gwl %>% 
-  filter(year >= 2015,
-         year <= 2200) %>% 
-  rename("Global Warming Level (°C)" = gwl,
-         "Year" = year)
-  
-s1_cnrm <- gwl_s1 %>% 
-  filter(model == "CNRM-ESM2-1") %>% 
-  ggplot(aes(x = Year, y = `Global Warming Level (°C)`)) +
-  annotate("rect", 
-           xmin = code_df$year_os_starts[1],
-           xmax = code_df$year_low[1],
-           ymin = -Inf, ymax = Inf,
-           fill = "firebrick1", alpha = 0.4
-           ) +
-  geom_line() +
-  labs(subtitle = "CNRM-ESM2-1", y = "") +
-  theme_bw(); s1_cnrm
-
-s1_can <- gwl_s1 %>% 
-  filter(model == "CanESM5") %>% 
-  ggplot(aes(x = Year, y = `Global Warming Level (°C)`)) +
-  annotate("rect", 
-           xmin = code_df$year_os_starts[2],
-           xmax = code_df$year_low[2],
-           ymin = -Inf, ymax = Inf,
-           fill = "firebrick1", alpha = 0.4
-  ) +
-  geom_line() +
-  labs(subtitle = "CanESM5") +
-  theme_bw(); s1_can
-
-s1_giss <- gwl_s1 %>% 
-  filter(model == "GISS-E2-1-G") %>% 
-  ggplot(aes(x = Year, y = `Global Warming Level (°C)`)) +
-  annotate("rect", 
-           xmin = code_df$year_os_starts[3],
-           xmax = code_df$year_low[3],
-           ymin = -Inf, ymax = Inf,
-           fill = "firebrick1", alpha = 0.4
-  ) +
-  geom_line() +
-  labs(subtitle = "GISS-E2-1-G", y = "") +
-  theme_bw(); s1_giss
-
-s1_ipsl <- gwl_s1 %>% 
-  filter(model == "IPSL-CM6A-LR") %>% 
-  ggplot(aes(x = Year, y = `Global Warming Level (°C)`)) +
-  annotate("rect", 
-           xmin = code_df$year_os_starts[4],
-           xmax = code_df$year_low[4],
-           ymin = -Inf, ymax = Inf,
-           fill = "firebrick1", alpha = 0.4
-  ) +
-  geom_line() +
-  labs(subtitle = "IPSL-CM6A-LR") +
-  theme_bw(); s1_ipsl
-
-s1_mri <- gwl_s1 %>% 
-  filter(model == "MRI-ESM2-0") %>% 
-  ggplot(aes(x = Year, y = `Global Warming Level (°C)`)) +
-  annotate("rect", 
-           xmin = code_df$year_os_starts[5],
-           xmax = code_df$year_low[5],
-           ymin = -Inf, ymax = Inf,
-           fill = "firebrick1", alpha = 0.4
-  ) +
-  geom_line() +
-  labs(subtitle = "MRI-ESM2-0", y = "") +
-  theme_bw(); s1_mri
-
-
-p_s1 <- (s1_can | s1_cnrm | s1_giss) /
-  ((plot_spacer() + s1_ipsl + s1_mri + plot_spacer()) +
-  plot_layout(widths = c(1,2,2,1))); p_s1
-
-ggsave(here("figures/Fig_S1.jpg"),
-       p_s1,
-       width = 21, height = 12, units = "cm", dpi = 700)
-
-
-
+# classify exposure events according to the gwl 
 data <- data %>% 
   left_join(code_df, by ="model") %>% 
   mutate(overshoot_phase = case_when(exposure < year_os_starts ~ "pre_os",
                                      exposure >= year_os_starts & exposure <= year_peak ~ "warming_phase",
                                      exposure > year_peak & exposure <= year_low ~ "cooling_phase",
-                                     exposure > year_low ~ "post_os"))
-
-
-
-# classifying exposure events according to the gwl at de-exposure
-data <- data %>% 
+                                     exposure > year_low ~ "post_os")) %>% 
   mutate(code = case_when(gwl_diff >= 0.04 ~ "less_cooling",
                           gwl_diff < 0.04 & gwl_diff >= -0.04 ~ "same_gwl",
                           gwl_diff < -0.04 ~ "more_cooling")) %>% 
@@ -188,7 +79,7 @@ data <- data %>%
 
 
 
-
+# get proportions
 data_proportions <- data %>% 
   filter(overshoot_phase %in% c("warming_phase", "cooling_phase")) %>% 
   group_by(model) %>% 
@@ -199,6 +90,7 @@ data_proportions <- data %>%
   count(code2) %>% 
   mutate(perc = n/sum(n)) %>% 
   mutate(code2 = fct_reorder(code2, perc))
+
 
 data_pi <- data_proportions %>% 
   group_by(model) %>% 
@@ -287,13 +179,6 @@ p2 <- map(models, function(x){
           strip.background = element_blank())
   
 })
-
-
-# ggsave(here("figures/test.jpg"),
-#        p,
-#        width = 21, height = 7.5, units = "cm", dpi = 500)
-
-
 
 
 # maps

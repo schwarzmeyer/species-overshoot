@@ -1,12 +1,13 @@
 # POTENTIAL FIGURE 1 
 
-data_median <- readRDS(paste0(path, "Results/Risk Metric/risk_raw_median.rds"))
+data_median <- readRDS(here("results/risk/risk_raw_median.rds"))
 
-amph <- readRDS(paste0(path, "Data/Species Data/Range Maps Grid Cells/Amphibians.rds"))
-bird <- readRDS(paste0(path, "Data/Species Data/Range Maps Grid Cells/Birds.rds"))
-mamm <- readRDS(paste0(path, "Data/Species Data/Range Maps Grid Cells/Mammals.rds"))
-rept <- readRDS(paste0(path, "Data/Species Data/Range Maps Grid Cells/Reptiles.rds"))
-fish <- readRDS(paste0(path, "Data/Species Data/Range Maps Grid Cells/Fishes.rds"))
+amph <- readRDS(here("processed_data/species_data/range_maps_grid_cells/Amphibians.rds"))
+bird <- readRDS(here("processed_data/species_data/range_maps_grid_cells/Birds.rds"))
+mamm <- readRDS(here("processed_data/species_data/range_maps_grid_cells/Mammals.rds"))
+rept <- readRDS(here("processed_data/species_data/range_maps_grid_cells/Reptiles.rds"))
+fish <- readRDS(here("processed_data/species_data/range_maps_grid_cells/Fishes.rds"))
+
 
 range_data <- c(amph, bird, mamm, rept, fish) 
 
@@ -19,6 +20,18 @@ round(sum(data_median$n_cells_exposed)/total_populations*100,1)
 # number of species exposed
 round(length(unique(data_median$species))/total_species*100,1)
 
+round(length(unique(data_median$species))/total_species*100,1)
+
+qrange <- 0.8
+qduration <- 100
+
+species_at_risk <- data_median %>% 
+  filter(mean_local_duration >= qduration,
+         range_exposed >= qrange) %>% 
+  count(species) %>% 
+  nrow()
+
+species_at_risk/total_species*100
 
 # range across models
 data_models <- readRDS(paste0(path, "Results/Risk Metric/risk_raw_models.rds"))
