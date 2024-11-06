@@ -11,7 +11,7 @@ pre_industrial_avg <- global_temp_avg %>%
   mutate(pre_industrial_avg = mean(temperature[year <= 1900])) %>% 
   filter(year == 1850) %>% 
   select(-year, -temperature)
-  
+
 # calculate global warming averages from the 30-yr rolling average data
 global_temp_roll <- readRDS(here("processed_data/climate_data/global_averages/global_averages_rolling_30yr.rds"))
 
@@ -80,107 +80,105 @@ data <- data %>%
 
 
 # get proportions
-data_proportions <- data %>% 
+data_plot <- data %>% 
   filter(overshoot_phase %in% c("warming_phase", "cooling_phase")) %>% 
-  group_by(model) %>% 
-  mutate(code2 = case_when(code == "less_cooling" ~ "Additional cooling was not needed",
-                           code == "same_gwl" ~ "Additional cooling was not needed",
-                           code == "more_cooling" ~ "De-exposure needed additional cooling",
-                           code == "never" ~ "No de-exposure")) %>% 
+  mutate(realm = ifelse(group == "Fishes", "marine", "terrestrial")) %>% 
+  mutate(code2 = case_when(code == "less_cooling" ~ "Additional cooling \nwas not needed",
+                           code == "same_gwl" ~ "Additional cooling \nwas not needed",
+                           code == "more_cooling" ~ "De-exposure needed \nadditional cooling",
+                           code == "never" ~ "No de-exposure")) 
+
+data_proportions <- data_plot %>% 
+  group_by(realm, model) %>% 
   count(code2) %>% 
   mutate(perc = n/sum(n)) %>% 
   mutate(code2 = fct_reorder(code2, perc))
 
 
-data_pi <- data_proportions %>% 
-  group_by(model) %>% 
-  mutate(start = lag(perc, default = 0) * 2 * pi,
-         end = cumsum(perc) * 2 * pi,
-         midpoint = cumsum(perc) - perc / 2)
+  
+  
+p1 <- data_plot %>% 
+  group_by(model, group) %>% 
+  count(code2) %>% 
+  mutate(perc = n/sum(n)*100) %>% 
+  group_by(group, code2) %>% 
+  summarise(mid = median(perc),
+            lower = min(perc),
+            upper = max(perc), 
+            .groups = "drop") %>% 
+  mutate(group = fct_reorder(group, mid)) %>% 
+  filter(code2 != "Additional cooling \nwas not needed") %>% 
+  ggplot(aes(x = mid, y = group, fill = code2)) +
+  geom_bar(position = "dodge", stat = "identity", width = 0.8) +
+  geom_errorbar(aes(xmin = lower, xmax = upper), width = 0.2, position = position_dodge(width = 0.8),
+                colour = rep(darken(c("#88C0D0",  "#DC143C"), 0.2), 5)) +
+  scale_fill_manual(values = c("#4970A5", "#FF5D6F"), name = "") +
+  # geom_errorbar(aes(xmin = lower, xmax = upper), width = 0.2, position = position_dodge(width = 0.8),
+  #               colour = rep(darken(c("#88C0D0", "#0d4d84", "#DC143C"), 0.4), 5)) +
+  # scale_fill_manual(values = c("#92C9D9", "#366297", "#ED2E4C"), name = "") +
+  scale_x_continuous(limits = c(0,60), expand = c(0,0)) +
+  labs(x = "Proportion of exposure events (%)", y = "") +
+  theme_tidybayes() +
+  theme(axis.line.y = element_blank(),
+        axis.title.x = element_text(size = 9, vjust = -2),
+        legend.position = "none",
+        legend.direction = "horizontal",
+        legend.key.size = unit(5, "pt"),
+        legend.text = element_text(size = 8.5),
+        plot.margin = margin(r = 20, t = 10, b = 20)); p1
 
+p2 <- data %>% 
+  filter(overshoot_phase %in% c("warming_phase", "cooling_phase"),
+         code == "more_cooling") %>% 
+  group_by(group, model) %>% 
+  summarise(med = median(gwl_diff),
+            p80 = quantile(gwl_diff, probs = 0.2),
+            p95 = quantile(gwl_diff, probs = 0.05), 
+            .groups = "drop") %>% 
+  group_by(group) %>% 
+  summarise(mid_med = median(med),
+            upper_med = max(med),
+            lower_med = min(med),
+            mid_p80 = median(p80),
+            upper_p80 = max(p80),
+            lower_p80 = min(p80),
+            mid_p95 = median(p95),
+            upper_p95 = max(p95),
+            lower_p95 = min(p95),
+            .groups = "drop") %>% 
+  mutate(group = factor(group, levels = c("Birds", "Mammals", "Reptiles", "Amphibians", "Fishes"))) %>% 
+  ggplot(aes(y = group)) +
+  geom_pointrange(aes(x = mid_med, xmin = lower_med, xmax = upper_med, colour = "50%"), 
+                  position = position_nudge(y = 0.2), fatten = 2) +
+  geom_pointrange(aes(x = mid_p80, xmin = lower_p80, xmax = upper_p80, colour = "80%"),
+                  fatten = 2) +
+  geom_pointrange(aes(x = mid_p95, xmin = lower_p95, xmax = upper_p95, colour = "95%"), 
+                  position = position_nudge(y = -0.2), fatten = 2) +
+  scale_x_reverse(limits = c(-0.08, -0.8), expand = c(0,0), breaks = seq(-0.1,-0.8,-0.1)) +
+  labs(x = "Additional cooling needed for de-exposure (°C)", y = "") +
+  scale_colour_manual(values = c("#88C0D0","#4970A5","#01294B"), name = "% of populations de-exposed") +
+  coord_cartesian(clip = "off") +
+  annotate("text", x = -0.45, y = 6, label = "Percentange of\npopulations de-exposed", hjust = 0, 
+           size = 2.8, colour = "grey40", fontface = 3) +
+  annotate("text", x = -0.15, y = 5.55, label = "50%", color = "#88C0D0", size = 3) +
+  annotate("text", x = -0.3, y = 5.35, label = "80%", color = "#4970A5", size = 3) +
+  annotate("text", x = -0.4, y = 4.5, label = "95%", color = "#01294B", size = 3) +
+  theme_tidybayes() +
+  theme(#axis.line.y = element_blank(),
+        #axis.ticks.y = element_blank(),
+        legend.position = "none",
+        legend.direction = "horizontal",
+        legend.text = element_text(size = 8.5),
+        legend.title = element_text(size = 8.5),
+        legend.title.position = "bottom",
+        axis.title.x = element_text(size = 9, vjust = -2),
+        plot.margin = margin(r = 20, t = 20, b = 10)); p2
 
-p1 <- map(models, function(x){
-  
-  y_title <- ifelse(x == "CanESM5", "% of populations", "")
-    
-  my_plot <- data_pi %>% 
-    filter(model == x) %>% 
-    ggplot() +
-    ggforce::geom_arc_bar(aes(x0 = 0, y0 = 0, 
-                              r0 = 0.72, r = 1.08,
-                              start = start,
-                              end = end,
-                              fill = code2), 
-                          colour = NA, show.legend = T) +
-    coord_equal(expand = F, xlim = c(-1.1, 1.1), ylim = c(-1.1, 1.1), clip = "off") + 
-    scale_fill_manual(values = c("#DC143C","#FF8C00","#77a9d0")) +
-    annotate("text", x = 0, y = 0, label = x, size = 2.6) +
-    geom_text(aes(
-      x = 1.35 * sin(2 * pi * midpoint),
-      y = 1.35 * cos(2 * pi * midpoint),
-      label = paste0(round(perc*100, 0), "%")
-    ), size = 3.1, fontface = "bold",
-    colour = darken(c("#77a9d0", "#FF8C00", "#DC143C"), amount = 0.15)) +
-    theme_minimal() +
-    labs(y = y_title, x = "") +
-    theme(plot.margin = margin(t = 0, b = -0.1, l = 0 , r = 0, unit = "cm"),
-          legend.position = "top",
-          legend.direction = "horizontal",
-          legend.title = element_blank(),
-          panel.grid = element_blank(),
-          axis.text = element_blank(),
-          axis.title.y = element_text(size = 10, vjust = 3))
-  
-  return(my_plot)
-  
-  
-})
+p <- plot_grid(p1, p2, scale = 0.95, labels = c("a", "b"), ncol = 1, align = "v", label_size = 11)
 
-
-p2 <- map(models, function(x){
-  
-  x_title <- ifelse(x == "GISS-E2-1-G", "Additional cooling needed for de-exposure (°C)", "")
-  
-  data %>% 
-    filter(overshoot_phase %in% c("warming_phase", "cooling_phase"),
-           code == "more_cooling",
-           model == x) %>% 
-    ggplot(aes(y = 1, x = gwl_diff, fill = "", colour = "")) +
-    ggdist::stat_halfeye(
-      adjust = 1, 
-      width = 1, 
-      .width = 0, 
-      justification = -.4,
-      point_colour = NA,
-      show.legend = F) + 
-    geom_boxplot(
-      width = .4, 
-      outlier.shape = NA,
-      show.legend = F,
-      alpha = 0.4,
-      linewidth = 0.5
-    ) +
-    labs(x = x_title, y = "") +
-    scale_fill_manual(values = "#FF8C00") +
-    scale_colour_manual(values = "#FF8C00") +
-    scale_x_reverse(limits = c(0, -0.8), expand = c(0,0)) +
-    ylim(c(0.6 ,3.2)) +
-    theme_tidybayes() +
-    theme(panel.grid.major = element_blank(),
-          panel.grid.minor = element_blank(),
-          axis.title.x = element_text(size = 11, vjust = -3),
-          axis.text.x = element_text(size = 9.5),
-          axis.text.y = element_blank(),
-          axis.line.y = element_blank(),
-          axis.ticks.y = element_blank(),
-          plot.margin = margin(t = 0.3, b = 0.1, r = 0, l= 0,  unit = "cm"),
-          panel.background = element_blank(),
-          plot.background = element_blank(),
-          strip.background = element_blank())
-  
-})
-
-
+ggsave(here("figures/Fig_04_n.jpg"),
+       p,
+       width = 12, height = 15, units = "cm", dpi = 700)
 # maps
 
 data_land <- data %>% 
@@ -220,92 +218,118 @@ grid_ocean <- readRDS(here("raw_data/spatial_data/ocean_grid_robin.rds"))
 grid_land_join <- left_join(grid_land, data_land, by = c("WorldID" = "world_id"))
 grid_ocean_join <- left_join(grid_ocean, data_ocean, by = c("WorldID" = "world_id"))
 
-bks <- c(5,10,20,40,60,80,100,125,150,1500)
-
-bks <- c(5,10,20,30,40,60,80,100,1500)
 
 
-viridis_begin <- 0.2
+bks <- c(1,5,10,20,30,50,100,1000)
 
-fill_columns <- c("less_cooling", "never", "more_cooling")
+fill_columns <- c("never", "less_cooling", "more_cooling")
 
 p_map <- map(fill_columns, function(x){
   
-  title_colour <- darken(ifelse(x == "less_cooling", "#77a9d0",
-                         ifelse(x == "never", "#DC143C","#FF8C00")), amount = 0.18)
+  bound_colour <- ifelse(x == "less_cooling", "#92C9D9",
+                                ifelse(x == "never", "#ED2E4C","#366297"))
   
   plot_title <- ifelse(x == "less_cooling", "Additional cooling was not needed",
                        ifelse(x == "never", "No de-exposure","De-exposure needed additional cooling"))
   
   
-  
+
   ggplot() +
-    geom_sf(data = bound, colour = NA, fill = "grey92") +
-    geom_sf(data = countries, colour = NA, fill = "grey78",  linewidth = 0.15) +
+    geom_sf(data = bound, colour = NA, fill = "grey90") +
+    geom_sf(data = countries, colour = NA, fill = "grey50",  linewidth = 0.15) +
     geom_sf(data = grid_ocean_join, aes(fill = !!sym(x)), colour = NA, show.legend = T) +
     geom_sf(data = grid_land_join, aes(fill = !!sym(x)), colour = NA, show.legend = T) +
-    geom_sf(data = countries, colour = "grey11", fill = NA,  linewidth = 0.15) +
-    geom_sf(data = bound, colour = title_colour, fill = NA, linewidth = 0.3) +
-    scale_fill_viridis_b(option = "B", direction = 1, breaks = bks, name = "N. of species",
-                         end = 1, begin = viridis_begin, na.value = NA) +
-    # scale_colour_viridis_b(option = "B", direction = 1, breaks = bks, name = "N. of species",
-    #                        end = 1, begin = viridis_begin, na.value = NA) +
+    geom_sf(data = countries, colour = "black", fill = NA,  linewidth = 0.15) +
+    # geom_sf(data = bound, colour = bound_colour, fill = NA, linewidth = 0.3) +
+    scale_fill_viridis_b(option = "D", direction = 1, breaks = bks, name = "N. of species",
+                         end = 0.95, begin = 0.25, na.value = NA, limits = range(bks),
+                         labels = c("", bks[2:(length(bks)-1)], "")) +
     labs(subtitle = plot_title) +
     theme_map() +
     theme(legend.position = "bottom",
           legend.direction = "horizontal",
+          legend.justification = "center", 
           plot.margin = margin(t = 0.6, unit = "cm"),
           legend.title = element_text(size = 11),
           legend.text = element_text(size = 8),
-          plot.subtitle = element_text(size = 11, hjust = 0.5, vjust = -1, colour = title_colour)) +
-    guides(fill = guide_colorsteps(title.position = 'top',
+          plot.subtitle = element_text(size = 11, hjust = 0.5, vjust = -1)) +
+    guides(fill = guide_colorsteps(title.position = "top",
                                    title.hjust = .5, 
-                                   barwidth = unit(9, 'lines'), 
-                                   barheight = unit(.4, 'lines')))
+                                   barwidth = unit(13, "lines"), 
+                                   barheight = unit(.4, "lines")))
   
   
   
 })
 
- 
 
- 
-
-p <- wrap_elements(
-  p1[[1]] + plot_spacer() + p2[[1]] + 
-    p1[[2]] + plot_spacer() + p2[[2]] +
-    p1[[3]] + plot_spacer() + p2[[3]] + 
-    p1[[4]] + plot_spacer() + p2[[4]] + 
-    p1[[5]] + plot_spacer() + p2[[5]] +
-    plot_layout(ncol = 5, byrow = F, heights = c(1.4,-0.54, 0.65), 
-                guides = "collect") +
-    plot_annotation(title = "a") &
-    theme(legend.position = "top",
-          legend.key.size = unit(0.4, "cm"),
-          legend.text = element_text(size = 10),
-          legend.margin = margin(b = 0.8, t = -0.8, unit = "cm"),
-          plot.title = element_text(size = 13, face = "bold", vjust = 5))) 
+# p <- plot_grid(p1, p2, scale = 0.95, labels = c("a", "b"))
+# pp <- plot_grid(p_map[[1]] + theme(legend.position = "none"),
+#                 p_map[[2]] + theme(legend.position = "none")) 
+#   
+# p_final <- plot_grid(p, 
+#                      pp, 
+#                      p_map[[3]] + theme(plot.margin = margin(b = 10)), 
+#                      ncol = 1, rel_heights = c(1,1,1.1))
 
 
+p <- plot_grid(p1, p2, scale = 0.95, labels = c("a", "b"), ncol = 1, align = "v", label_size = 11)
 
-p_maps <- wrap_elements(
-  (p_map[[1]] + p_map[[2]]) / plot_spacer() / p_map[[3]] +
-    plot_layout(guides = "collect", heights = c(1.05, -0.17, 1.2)) +
-    plot_annotation(title = "b") &
-    theme(legend.position = "bottom",
-          plot.title = element_text(size = 13, face = "bold", vjust = -5)) &
-    guides(fill = guide_colorsteps(title.position = "top",
-                                   title.hjust = 0.5,
-                                   barwidth = unit(15, 'lines'), 
-                                   barheight = unit(.5, 'lines'))))
-  
 
-  
-p_final <- p / p_maps + 
-  plot_layout(heights = c(0.5, 1), guides = "collect")
+ggsave(here("figures/Fig_04_n.jpg"),
+       p,
+       width = 12, height = 15, units = "cm", dpi = 700)
 
-ggsave(here("figures/Fig_04.jpg"),
+
+
+
+
+
+p1 + p2 + plot_layout(ncol = 1) +
+  plot_annotation(tag_levels = "a")
+
+
+pp <- plot_grid(p_map[[1]] + theme(legend.position = "none"),
+                     p_map[[2]], ncol = 1) 
+
+p_final <- plot_grid(p, 
+                     pp, 
+                     ncol = 1, rel_heights = c(1,2))
+
+
+p1 + p2 + p_map[[1]] + p_map[[2]] + 
+  plot_layout(ncol = 2, guides = "collect", byrow = F) &
+  theme(legend.position = "bottom")
+
+p <- p1 + p2 + plot_layout(ncol = 1)
+p + pp + plot_layout(ncol = 2)
+
+p_final <- p1 + p2 + p_map[[1]]
+ggsave(here("figures/Fig_04_n.jpg"),
        p_final,
        width = 21, height = 24, units = "cm", dpi = 700)
 
 
+
+
+
+
+pp <- (p1 + p2) / 
+  p_map[[1]] + 
+  p_map[[2]] +
+  p_map[[3]] + plot_layout(ncol = 1)
+
+ggsave(here("figures/Fig_04_n.jpg"),
+       pp,
+       width = 21, height = 24, units = "cm", dpi = 700)
+
+maps <-  (p_map[[1]] + p_map[[2]]) / p_map[[3]] + plot_layout(guides = "collect", heights = c(1,1))
+maps
+
+p <- p1 + p2
+
+p <- plot_grid(p1, p2,  plotlist = p_map, ncol = 2)
+
+p_final <- plot_grid(p, plotlist = p_map, ncol = 1)
+
+p_final <- p + maps + plot_layout(nrow = 2)
