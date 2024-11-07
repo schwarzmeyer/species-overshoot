@@ -21,7 +21,8 @@ bound <- readRDS(here("raw_data/random/bbox.rds"))
 qrange <- 0.8
 qduration <- 100
 
-theme_colour <- lighten("#150f35", 0.1)
+theme_colour_1 <- "grey75"
+theme_colour_2 <- lighten("#14151f",0.1)
 
 median_qrange <- median(data_median$range_exposed)
 median_qduration <- median(data_median$mean_local_duration)
@@ -29,12 +30,9 @@ median_qduration <- median(data_median$mean_local_duration)
 p1 <-  ggplot(data_median, aes(x = range_exposed*100)) +
   geom_histogram(aes(fill = range_exposed*100 >= qrange*100), binwidth = 5, boundary = 0, colour = "white") +
   geom_boxplot(aes(y = -1700), width = 1400) +
-  scale_fill_manual(values = c("grey73",theme_colour)) +
+  scale_fill_manual(values = c(theme_colour_1,theme_colour_2)) +
   labs(y = "N. of species", x = "Range exposed (%)") +
   scale_y_continuous(breaks = c(0,3000,6000,9000)) +
-  # annotate("segment", x = median_qrange*100, xend = median_qrange*100, y = 30, yend = 7500, color = "black", linewidth = 0.8, 
-  #          linetype = 2) +
-  # annotate("text", x = median_qrange*100, y = 8700, label = "32%", color = "black", fontface = 2, size = 3.2) +
   coord_cartesian(clip = "off", ylim = c(-3000,9000)) +
   theme_tidybayes() +
   theme(legend.position = "none",
@@ -45,12 +43,9 @@ p1 <-  ggplot(data_median, aes(x = range_exposed*100)) +
 p2 <- ggplot(data_median, aes(x = mean_local_duration)) +
     geom_histogram(aes(fill = mean_local_duration >= qduration),  binwidth = 10, boundary = 0, closed = "left", position = "identity", colour = "white") +
     geom_boxplot(aes(y = -1600), width = 1000, outlier.color = NA) +
-    scale_fill_manual(values = c("grey73",theme_colour)) +
+    scale_fill_manual(values = c(theme_colour_1,theme_colour_2)) +
     labs(y = "N. of species", x = "Duration (years)") +
     scale_y_continuous(breaks = c(0,2000,4000,6000)) +
-    # annotate("segment", x = median_qduration, xend = median_qduration, y = 30, yend = 6000, color = "grey40", linewidth = 0.8, 
-    #        linetype = 2) +
-    # annotate("text", x = 119, y = 7100, label = "109 years", color = "black", fontface = 2, size = 3.2) +
     coord_cartesian(clip = "off", ylim = c(-2300,6000)) +
     theme_tidybayes() +
     theme(legend.position = "none",
@@ -128,40 +123,6 @@ grid_land <- left_join(grid_land, data_land, by = "WorldID")
 grid_ocean <- left_join(grid_ocean, data_ocean, by = "WorldID")
 
 
-# grid_ocean_perc <- grid_ocean %>% 
-#   mutate(spp_risk_perc = ifelse(spp_risk_perc <= 1, NA, spp_risk_perc))
-# 
-# grid_land_perc <- grid_land %>% 
-#   mutate(spp_risk_perc = ifelse(spp_risk_perc <= 1, NA, spp_risk_perc))
-# 
-# 
-# 
-# bks <- c(1,2, 5,10,20,30,40,65)
-#   
-# 
-# ggplot() +
-#   geom_sf(data = bound, colour = NA, fill = "grey91") +
-#   geom_sf(data = countries, colour = NA, fill = "grey73",  linewidth = 0.2) +
-#   geom_sf(data = grid_ocean_perc, aes(fill = spp_risk_perc, colour = spp_risk_perc), show.legend = T) +
-#   geom_sf(data = grid_land_perc, aes(fill = spp_risk_perc, colour = spp_risk_perc), show.legend = T) +
-#   geom_sf(data = countries, colour = "grey22", fill = NA,  linewidth = 0.3) +
-#   geom_sf(data = bound, colour = "grey22", fill = NA, linewidth = 0.5) +
-#   scale_fill_viridis_b(option = "C", direction = 1, breaks = bks, name = "% of species at risk of global extinction",
-#                        end = 0.98, begin = 0.27, na.value = NA, limits = c(min(bks),max(bks))) +
-#   scale_colour_viridis_b(option = "C", direction = 1, breaks = bks, name = "% of species at risk of global extinction",
-#                          end = 0.98, begin = 0.27, na.value = NA, limits = c(min(bks),max(bks))) +
-#   # coord_sf(ylim = c(-5500000,8000000)) +
-#   theme_map() +
-#   theme(legend.position.inside = c(0.28,0.98),
-#         legend.direction = "horizontal",
-#         plot.margin = margin(t=20,0,0,0),
-#         legend.title = element_text(size = 12),
-#         legend.text = element_text(size = 10)) +
-#   guides(fill = guide_colorsteps(title.position = 'top',
-#                                  title.hjust = .5, 
-#                                  barwidth = unit(18, 'lines'), barheight = unit(.65, 'lines')))
-
-
 grid_ocean <- grid_ocean %>% 
   mutate(spp_risk = ifelse(spp_risk <= 1, NA, spp_risk))
 
@@ -169,27 +130,28 @@ grid_land <- grid_land %>%
   mutate(spp_risk = ifelse(spp_risk <= 1, NA, spp_risk))
 
 
-bks2 <- c(1,5,10,15,20,30,50,204)
+bks <- c(1,5,10,15,25,50,100,max(grid_land$spp_risk, na.rm = T))
 
 
 pmap <- ggplot() +
-  geom_sf(data = countries, colour = NA, fill = "#150f36",  linewidth = 0.2) +
+  geom_sf(data = bound, colour = NA, fill = lighten("#04061a", 0.3)) +
+  geom_sf(data = countries, colour = NA, fill = lighten("#04061a", 0.05)) +
   geom_sf(data = grid_ocean, aes(fill = spp_risk), colour = NA, show.legend = T) +
   geom_sf(data = grid_land, aes(fill = spp_risk), colour = NA, show.legend = T) +
-  geom_sf(data = countries, colour = "grey", fill = NA,  linewidth = 0.25) +
-  scale_fill_viridis_b(option = "A", direction = 1, breaks = bks2, 
+  geom_sf(data = countries, colour = scales::alpha("white", 0.5), fill = NA,  linewidth = 0.25) +
+  scale_fill_viridis_b(option = "F", direction = 1, breaks = bks, 
                        name = "Number of species at risk of global extinction",
-                       end = 0.96, begin = 0.2, na.value = NA, limits = c(min(bks2),max(bks2))) +
-  coord_sf(ylim = c(-5500000,8000000)) +
+                       end = 1, begin = 0.25, na.value = NA, limits = range(bks)) +
   theme_map() +
-  theme(legend.position.inside = c(0.28,1.05),
+  theme(legend.position.inside = c(0.5,1.05),
+        legend.justification = "centre",
         legend.direction = "horizontal",
-        plot.margin = margin(t = 100, b = 0, l = 0, r = 0),
-        legend.title = element_text(size = 12),
-        legend.text = element_text(size = 10)) +
+        plot.margin = margin(t = 7.5, unit = "line"),
+        legend.title = element_text(size = 11),
+        legend.text = element_text(size = 9)) +
   guides(fill = guide_colorsteps(title.position = 'top',
                                  title.hjust = .5, 
-                                 barwidth = unit(18, 'lines'), barheight = unit(.65, 'lines')))
+                                 barwidth = unit(18, 'lines'), barheight = unit(.4, 'lines')))
 
 
 
@@ -201,7 +163,7 @@ richness <- tibble(group = c("Amphibians", "Birds", "Fishes", "Mammals", "Reptil
                                 length(unique(names(mamm))),
                                 length(unique(names(rept)))))
 
-phylo_color <- theme_colour
+phylo_color <- theme_colour_2
 
 p3 <- data_median %>% 
   filter(species %in% risk_spp) %>% 
@@ -214,13 +176,13 @@ p3 <- data_median %>%
   # mutate(group = factor(group, levels = rev(c("Amphibians","Reptiles","Mammals","Birds","Fishes")))) %>%
   ggplot(aes(x = value, y = group, fill = fct_rev(name))) +
   geom_col(position = "stack", width = 0.72) +
-  scale_fill_manual(values = c("grey73", theme_colour)) +
+  scale_fill_manual(values = c(theme_colour_1, theme_colour_2)) +
   scale_x_continuous(limits = c(0,11500), breaks = c(0,2500,5000,7500,10000), expand = c(0,0)) +
   coord_cartesian(clip = "off") +
   labs(x = "No. of species", y = "") +
   theme_tidybayes() +
   geom_text(aes(label = paste0("           ", round(perc, 0), "%")),
-            position = position_stack(vjust = 1), colour = rep(c(theme_colour,NA), 5), 
+            position = position_stack(vjust = 1), colour = rep(c(theme_colour_2,NA), 5), 
             fontface = 2, size = 3, family = "Tahoma") +
   add_phylopic(uuid = "264fa655-afd7-451c-8f27-e0a9557376e6", fill = phylo_color,
                x = 10500, y = 5, height = 0.78, alpha = 1) +  
@@ -249,7 +211,7 @@ pp <- plot_grid(
   pmap, ncol = 1,  rel_heights = c(1,2)) +
   draw_plot_label(letters[1:4],
                   c(0.01,0.01,0.45,0.01),
-                  c(1,0.8,1,0.55),
+                  c(1,0.8,1,0.56),
                   size = 12)
 
 
