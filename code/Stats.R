@@ -1,4 +1,4 @@
-# POTENTIAL FIGURE 1 
+# this code calculated the stats presented in the paper
 
 data_median <- readRDS(here("results/risk/risk_raw_median.rds"))
 

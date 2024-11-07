@@ -79,44 +79,45 @@ data <- data %>%
 
 
 
-# get proportions
-data_plot <- data %>% 
+# plot
+
+phylo_x_p1 <- 55
+phylo_x_p2 <- -0.85
+phylo_color <- "#4970A5" 
+  
+p1 <- data %>% 
   filter(overshoot_phase %in% c("warming_phase", "cooling_phase")) %>% 
-  mutate(realm = ifelse(group == "Fishes", "marine", "terrestrial")) %>% 
-  mutate(code2 = case_when(code == "less_cooling" ~ "Additional cooling \nwas not needed",
-                           code == "same_gwl" ~ "Additional cooling \nwas not needed",
-                           code == "more_cooling" ~ "De-exposure needed \nadditional cooling",
-                           code == "never" ~ "No de-exposure")) 
-
-data_proportions <- data_plot %>% 
-  group_by(realm, model) %>% 
-  count(code2) %>% 
-  mutate(perc = n/sum(n)) %>% 
-  mutate(code2 = fct_reorder(code2, perc))
-
-
-  
-  
-p1 <- data_plot %>% 
   group_by(model, group) %>% 
-  count(code2) %>% 
+  count(code) %>% 
   mutate(perc = n/sum(n)*100) %>% 
-  group_by(group, code2) %>% 
+  group_by(group, code) %>% 
   summarise(mid = median(perc),
             lower = min(perc),
             upper = max(perc), 
             .groups = "drop") %>% 
   mutate(group = fct_reorder(group, mid)) %>% 
-  filter(code2 != "Additional cooling \nwas not needed") %>% 
-  ggplot(aes(x = mid, y = group, fill = code2)) +
+  filter(code %in% c("never", "more_cooling")) %>% 
+  ggplot(aes(x = mid, y = group, fill = code)) +
   geom_bar(position = "dodge", stat = "identity", width = 0.8) +
   geom_errorbar(aes(xmin = lower, xmax = upper), width = 0.2, position = position_dodge(width = 0.8),
                 colour = rep(darken(c("#88C0D0",  "#DC143C"), 0.2), 5)) +
   scale_fill_manual(values = c("#4970A5", "#FF5D6F"), name = "") +
-  # geom_errorbar(aes(xmin = lower, xmax = upper), width = 0.2, position = position_dodge(width = 0.8),
-  #               colour = rep(darken(c("#88C0D0", "#0d4d84", "#DC143C"), 0.4), 5)) +
-  # scale_fill_manual(values = c("#92C9D9", "#366297", "#ED2E4C"), name = "") +
-  scale_x_continuous(limits = c(0,60), expand = c(0,0)) +
+  coord_cartesian(clip = "off") +
+  annotate("text", x = 0.1, y = 5.6, label = "No de-exposure", hjust = 0, colour = "#FF5D6F",
+           size = 2.7, fontface = 3) +
+  annotate("text", x = 13, y = 5.2, label = "De-exposure needed additional cooling", hjust = 0, colour = "#4970A5",
+           size = 2.7, fontface = 3) +
+  add_phylopic(uuid = "bd80bc51-460c-4dd9-8341-e5b460372efb", fill = phylo_color, # amphibians
+               x = phylo_x_p1, y = 4, height = 0.55, alpha = 1, horizontal = T) +    
+  add_phylopic(uuid = "157d3109-7124-413c-8362-3abcc6889a3f", fill = phylo_color, # birds
+               x = phylo_x_p1, y = 1, height = 0.67, alpha = 1) +   
+  add_phylopic(uuid = "1e606dbc-f881-4bd7-aaa5-01130f1fc6cc", fill = phylo_color, # mammals
+               x = phylo_x_p1, y = 2, height = 0.7, alpha = 1) +   
+  add_phylopic(uuid = "264fa655-afd7-451c-8f27-e0a9557376e6", fill = phylo_color, # reptiles
+               x = phylo_x_p1, y = 3, height = 0.75, alpha = 1) +   
+  add_phylopic(uuid = "c90aa49b-d9c5-44a4-a709-4f8d9a33b559", fill = phylo_color, # fish
+               x = phylo_x_p1, y = 5, height = 0.4, alpha = 1) + 
+  scale_x_continuous(limits = c(0,55), expand = c(0,0)) +
   labs(x = "Proportion of exposure events (%)", y = "") +
   theme_tidybayes() +
   theme(axis.line.y = element_blank(),
@@ -125,7 +126,8 @@ p1 <- data_plot %>%
         legend.direction = "horizontal",
         legend.key.size = unit(5, "pt"),
         legend.text = element_text(size = 8.5),
-        plot.margin = margin(r = 20, t = 10, b = 20)); p1
+        plot.margin = margin(r = 20, t = 15, b = 30)); 
+p1
 
 p2 <- data %>% 
   filter(overshoot_phase %in% c("warming_phase", "cooling_phase"),
@@ -149,36 +151,53 @@ p2 <- data %>%
   mutate(group = factor(group, levels = c("Birds", "Mammals", "Reptiles", "Amphibians", "Fishes"))) %>% 
   ggplot(aes(y = group)) +
   geom_pointrange(aes(x = mid_med, xmin = lower_med, xmax = upper_med, colour = "50%"), 
-                  position = position_nudge(y = 0.2), fatten = 2) +
+                  position = position_nudge(y = 0.23), fatten = 2) +
   geom_pointrange(aes(x = mid_p80, xmin = lower_p80, xmax = upper_p80, colour = "80%"),
                   fatten = 2) +
   geom_pointrange(aes(x = mid_p95, xmin = lower_p95, xmax = upper_p95, colour = "95%"), 
-                  position = position_nudge(y = -0.2), fatten = 2) +
-  scale_x_reverse(limits = c(-0.08, -0.8), expand = c(0,0), breaks = seq(-0.1,-0.8,-0.1)) +
+                  position = position_nudge(y = -0.23), fatten = 2) +
+  scale_x_reverse(limits = c(-0.08, -0.85), expand = c(0,0), breaks = seq(-0.1,-0.8,-0.1)) +
   labs(x = "Additional cooling needed for de-exposure (°C)", y = "") +
   scale_colour_manual(values = c("#88C0D0","#4970A5","#01294B"), name = "% of populations de-exposed") +
-  coord_cartesian(clip = "off") +
-  annotate("text", x = -0.45, y = 6, label = "Percentange of\npopulations de-exposed", hjust = 0, 
-           size = 2.8, colour = "grey40", fontface = 3) +
-  annotate("text", x = -0.15, y = 5.55, label = "50%", color = "#88C0D0", size = 3) +
-  annotate("text", x = -0.3, y = 5.35, label = "80%", color = "#4970A5", size = 3) +
-  annotate("text", x = -0.4, y = 4.5, label = "95%", color = "#01294B", size = 3) +
+  coord_cartesian(clip = "off", ylim = c(1,5)) +
+  annotate("text", x = -0.59, y = 6.25, label = "Proportion of\npopulations de-exposed", hjust = 0,
+           size = 2.7, colour = "grey50", fontface = 3) +
+  annotate("text", x = -0.245, y = 5.4, label = "50%", color = "#90B3BE", size = 3) +
+  annotate("text", x = -0.435, y = 5.15, label = "80%", color = "#4970A5", size = 3) +
+  annotate("text", x = -0.655, y = 4.95, label = "95%", color = "#01294B", size = 3) +
+  annotate("curve", x = -0.57, y = 6.3, xend = -0.27, yend = 5.7, 
+           curvature = 0.2, arrow = arrow(angle = 20, type = "closed", length = unit(4, "pt")), 
+           colour = "grey70", linewidth = 0.3) +
+  annotate("curve", x = -0.57, y = 6.2, xend = -0.46, yend = 5.4, 
+           curvature = 0.3, arrow = arrow(angle = 20, type = "closed", length = unit(4, "pt")), 
+           colour = "grey70", linewidth = 0.3) +
+  annotate("curve", x = -0.57, y = 6.1, xend = -0.62, yend = 5.2, 
+           curvature = 0.3, arrow = arrow(angle = 20, type = "closed", length = unit(4, "pt")), 
+           colour = "grey70", linewidth = 0.3) +
+  add_phylopic(uuid = "bd80bc51-460c-4dd9-8341-e5b460372efb", fill = phylo_color, # amphibians
+               x = phylo_x_p2, y = 4, height = 0.55, alpha = 1, horizontal = T) +    
+  add_phylopic(uuid = "157d3109-7124-413c-8362-3abcc6889a3f", fill = phylo_color, # birds
+               x = phylo_x_p2, y = 1, height = 0.67, alpha = 1) +   
+  add_phylopic(uuid = "1e606dbc-f881-4bd7-aaa5-01130f1fc6cc", fill = phylo_color, # mammals
+               x = phylo_x_p2, y = 2, height = 0.7, alpha = 1) +   
+  add_phylopic(uuid = "264fa655-afd7-451c-8f27-e0a9557376e6", fill = phylo_color, # reptiles
+               x = phylo_x_p2, y = 3, height = 0.75, alpha = 1) +   
+  add_phylopic(uuid = "c90aa49b-d9c5-44a4-a709-4f8d9a33b559", fill = phylo_color, # fish
+               x = phylo_x_p2, y = 5, height = 0.4, alpha = 1) + 
+  
   theme_tidybayes() +
-  theme(#axis.line.y = element_blank(),
-        #axis.ticks.y = element_blank(),
-        legend.position = "none",
-        legend.direction = "horizontal",
-        legend.text = element_text(size = 8.5),
-        legend.title = element_text(size = 8.5),
-        legend.title.position = "bottom",
+  theme(legend.position = "none",
         axis.title.x = element_text(size = 9, vjust = -2),
-        plot.margin = margin(r = 20, t = 20, b = 10)); p2
+        plot.margin = margin(r = 20, t = 25, b = 10, l = 0)); 
 
-p <- plot_grid(p1, p2, scale = 0.95, labels = c("a", "b"), ncol = 1, align = "v", label_size = 11)
 
-ggsave(here("figures/Fig_04_n.jpg"),
+
+p <- plot_grid(p1, p2, scale = 0.95, labels = c("a", "b"), ncol = 1, align = "v", label_size = 10, label_x = 0.02)
+
+ggsave(here("figures/Fig_04x.jpg"),
        p,
-       width = 12, height = 15, units = "cm", dpi = 700)
+       width = 12, height = 16, units = "cm", dpi = 700)
+
 # maps
 
 data_land <- data %>% 

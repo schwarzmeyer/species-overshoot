@@ -41,7 +41,7 @@ p1 <- data_iucn %>%
     adjust = 1.1, 
     width = .6, 
     .width = 0, 
-    justification = -.43,
+    justification = -.5,
     point_colour = NA,
     show.legend = F) + 
   geom_boxplot(
@@ -49,7 +49,7 @@ p1 <- data_iucn %>%
     outlier.shape = NA,
     show.legend = F,
     alpha = 0.3,
-    linewidth = 0.5
+    linewidth = 0.35
   ) +
   labs(x = "", y = "Range exposed (%)", title = "") +
   scale_fill_manual(values = darken(c("#50bc1e","#06b491","#f9e814","#f4900e","#D72104","#d1d1c7"),
@@ -58,8 +58,8 @@ p1 <- data_iucn %>%
                                       amount = 0.08)) +
   theme_tidybayes() +
   scale_y_continuous(expand = c(0,0)) +
-  theme(axis.text = element_text(size = 9))
-
+  theme(axis.text = element_text(size = 7.4),
+        axis.title = element_text(size = 9))
 
 p2 <- data_iucn %>% 
   filter(category %in% c("CR","EN","LC","VU","NT","DD")) %>% 
@@ -79,7 +79,7 @@ p2 <- data_iucn %>%
     outlier.shape = NA,
     show.legend = F,
     alpha = 0.3,
-    linewidth = 0.5
+    linewidth = 0.35
   ) +
   labs(x = "", y = "Duration (years)", title = "") +
   scale_fill_manual(values = darken(c("#50bc1e","#06b491","#f9e814","#f4900e","#D72104","#d1d1c7"),
@@ -88,15 +88,16 @@ p2 <- data_iucn %>%
                                       amount = 0.08)) +
   theme_tidybayes() +
   scale_y_continuous(expand = c(0,0)) +
-  theme(axis.text = element_text(size = 9))
+  theme(axis.text = element_text(size = 7.4),
+        axis.title = element_text(size = 9))
 
 
-pp <- plot_grid(p1, p2, ncol = 1, 
+pp <- plot_grid(p1, p2, ncol = 2, 
                 labels = "auto", 
-                label_size = 10, 
+                label_size = 9, 
                 label_x = 0.02,
                 scale = 0.95)
 
 ggsave(here("figures/Fig_02.jpg"),
        pp,
-       width = 8.9, height = 15, units = "cm", dpi = 700)
+       width = 16, height = 7, units = "cm", dpi = 700)

@@ -225,7 +225,7 @@ p3 <- data_median %>%
   add_phylopic(uuid = "264fa655-afd7-451c-8f27-e0a9557376e6", fill = phylo_color,
                x = 10500, y = 5, height = 0.78, alpha = 1) +  
   add_phylopic(uuid = "bd80bc51-460c-4dd9-8341-e5b460372efb", fill = phylo_color,
-               x = 7800, y = 4, height = 0.6, alpha = 1) +   
+               x = 7800, y = 4, height = 0.6, alpha = 1, horizontal = T) +   
   add_phylopic(uuid = "157d3109-7124-413c-8362-3abcc6889a3f", fill = phylo_color,
                x = 11500, y = 3, height = 0.7, alpha = 1) +   
   add_phylopic(uuid = "1e606dbc-f881-4bd7-aaa5-01130f1fc6cc", fill = phylo_color,
@@ -252,7 +252,6 @@ pp <- plot_grid(
                   c(1,0.8,1,0.55),
                   size = 12)
 
-pp
 
 ggsave(here("figures/Fig_01.jpg"),
        pp,
