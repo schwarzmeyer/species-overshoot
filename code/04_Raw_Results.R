@@ -1,7 +1,10 @@
-# Code to generate the raw results used to construct the horizons profiles
-# Raw results are matrices in which rows represent the species occurring in an assemblage (i.e. grid cell)
-# and columns are the years in the time series. The cell is assigned with 1 if the climate is suitable
-# for the species in a given year. The cell is assigned with 0 if the climate is unsuitable.
+# script to generate the raw results used to construct the horizons profiles
+
+############################################################
+
+# the script generate matrices in which rows represent the species occurring in an assemblage (i.e. grid cell)
+# and columns are the years in the time series. the cell is assigned with 1 if the climate is suitable
+# for the species in a given year. the cell is assigned with 0 if the climate is unsuitable.
  
 spp_ranges <- list.files(here("processed_data/species_data/range_maps_grid_cells"), full.names = T)
 spp_names <- list.files(here("processed_data/species_data/range_maps_grid_cells"), full.names = F)
@@ -11,7 +14,7 @@ temp_matrices_ocean <- grep("ocean", temp_matrices, value = T)
 
 niche_data_raw <- list.files(here("processed_data/species_data/niche_limits/raw"), full.names = T)
 
-models <- c("CanESM5","CNRM-ESM2-1","GISS-E2-1-G","IPSL-CM6A-LR","MRI-ESM2-0")
+models <- c("ACCESS-ESM1-5","CNRM-ESM2-1","GISS-E2-1-G","IPSL-CM6A-LR","MRI-ESM2-0")
 
 groups <- c("Amphibians","Birds","Fishes","Mammals","Reptiles")
 
@@ -52,10 +55,10 @@ for(j in seq_along(models)){
   temp_matrix_ocean <- readRDS(grep("ocean", temp_matrix_tmp, value = T))
   
   temp_matrix_land <- temp_matrix_land %>% 
-    select(WorldID, as.character(2015:2219))
+    select(WorldID, as.character(2015:2220))
   
   temp_matrix_ocean <- temp_matrix_ocean %>% 
-    select(WorldID, as.character(2015:2219))
+    select(WorldID, as.character(2015:2220))
   
   niche_data_tmp <- grep(models[j], niche_data, value = T)
   
@@ -91,7 +94,10 @@ for(j in seq_along(models)){
   
   
     saveRDS(res, 
-            file = here("results/raw_results", paste0("raw_",models[j],"_",groups[i],".rds")))
+            file = here(glue("results/raw_results/raw_{models[j]}_{groups[i]}.rds")))
   
   }
 } 
+
+
+

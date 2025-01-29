@@ -1,3 +1,7 @@
+# script to transform IUCN ranges to the gridded format.
+
+#################################################################
+
 # load grid
 terrestrial_grid <- readRDS(here("raw_data/spatial_data/terrestrial_grid_equal_area.rds"))
 ocean_grid <- readRDS(here("raw_data/spatial_data/ocean_grid_equal_area.rds"))
@@ -106,8 +110,6 @@ saveRDS(res, here("processed_data/species_data/range_maps_grid_cells/Reptiles.rd
 # write species attribute table
 ranges_df <- st_drop_geometry(ranges)
 write.csv2(ranges_df, here("processed_data/species_data/attribute_tables/Reptiles.csv"), row.names = F)
-
-
 
 
 

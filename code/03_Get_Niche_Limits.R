@@ -1,17 +1,18 @@
-# code to compute upper and lowet thermal niche limits for each species
- 
+# script to compute upper and lowet thermal niche limits for each species
+
+#############################################################
+
 # load files
 spp_files <- list.files(here("processed_data/species_data/range_maps_grid_cells"), full.names = T)
 spp_names <- list.files(here("processed_data/species_data/range_maps_grid_cells"), full.names = F)
 temp_matrices <- list.files(here("processed_data/climate_data/temperature_matrices/"), full.names = T)
-models <- c("CanESM5","CNRM-ESM2-1","GISS-E2-1-G","IPSL-CM6A-LR","MRI-ESM2-0")
+models <- c("ACCESS-ESM1-5","CNRM-ESM2-1","GISS-E2-1-G","IPSL-CM6A-LR","MRI-ESM2-0")
 
 
 # function to compute the limits
 get_niche_limits <- function(species_ranges, temperature_matrix, temperature_data_type){
   
   if(temperature_data_type == "raw") first_year <- 1850
-  if(temperature_data_type == "rolling_30yr") first_year <- 1879
 
   data <- temperature_matrix %>% 
     select(WorldID, as.character(first_year:2014)) %>% 
@@ -106,12 +107,12 @@ for(i in seq_along(spp_files)){
 
     res <- na.omit(res)
     
-    res# save
+    # save
     saveRDS(res, 
-            file = here("processed_data/species_data/niche_limits", paste0(temperature_data_type,"/niche_",my_model,"_",spp_names[i])))
+            file = here(glue("processed_data/species_data/niche_limits/{temperature_data_type}/niche_{my_model}_{spp_names[i]}")))
     
     gc()
+    
   }
-  
 } 
 
