@@ -100,4 +100,4 @@ pp <- plot_grid(p1, p2, ncol = 2,
 
 ggsave(here("figures/Fig_02.jpg"),
        pp,
-       width = 16, height = 7, units = "cm", dpi = 700)
+       width = 16, height = 6.5, units = "cm", dpi = 700)
