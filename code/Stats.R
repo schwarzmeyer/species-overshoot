@@ -15,7 +15,6 @@ total_species <- length(unique(names(range_data)))
 
 risk_raw_models <- readRDS(here("results/risk/risk_raw_models.rds"))
 risk_thresholds_models <- readRDS(here("results/risk/risk_thresholds_models.rds"))
-risk_thresholds_median <- readRDS(here("results/risk/risk_thresholds_median.rds"))
 
 # Stats from the 2nd paragraph of the results
 
@@ -23,80 +22,61 @@ risk_thresholds_median <- readRDS(here("results/risk/risk_thresholds_median.rds"
 total_species
 
 # 1. Total number of species at risk from severe exposure at 2°C warming, peak and 2°C cooling ----
-
-# Median
-model_median <- risk_thresholds_median %>% 
-  filter(threshold %in% c("2w", "peak", "2c")) %>% 
-  group_by(threshold) %>% 
-  filter(range_exposed >= 0.8) %>%
-  summarise(all_species = length(unique(species))) %>% 
-  ungroup() %>% 
-  mutate(median = round(all_species/total_species * 100, 1))
-
-# Multimodel
-model_range <- risk_thresholds_models %>% 
-  filter(threshold %in% c("2w", "peak", "2c")) %>% 
-  group_by(model, threshold) %>% 
-  filter(range_exposed >= 0.8) %>%
-  summarise(all_species = length(unique(species))) %>% 
-  ungroup() %>% 
-  mutate(proportion = round(all_species/total_species * 100, 1)) %>% 
-  group_by(threshold) %>% 
-  summarise(min = min(proportion),
-            max = max(proportion))
-
-# Stats
-model_median %>% 
-  left_join(model_range, by = "threshold")
-
-# 2. Differences across thresholds ----
 # Absolute increase from 2w to peak
 # Absolute decrease from peak to 2c
 # Relative difference from 2w to 2c
 
-# Median
-model_median2 <- model_median %>% 
-  select(-all_species) %>% 
-  pivot_wider(names_from = threshold, values_from = median) %>% 
-  mutate(abs_increase = peak - `2w`,
-         abs_decrease = `2c` - peak,
-         relative_diff = (`2w`-`2c`)/`2w`*100) %>% 
-  pivot_longer(cols = c(abs_increase, abs_decrease, relative_diff),
-               values_to = "median") %>% 
-  select(name, median)
-
-# Multimodel 
-model_range2 <- risk_thresholds_models %>% 
+stats <- risk_thresholds_models %>% 
   filter(threshold %in% c("2w", "peak", "2c")) %>% 
-  group_by(model, threshold) %>% 
   filter(range_exposed >= 0.8) %>%
-  summarise(all_species = length(unique(species))) %>% 
+  group_by(model, threshold) %>% 
+  count(name = "exposed") %>% 
   ungroup() %>% 
-  mutate(proportion = round(all_species/total_species * 100, 1)) %>% 
-  select(-all_species) %>% 
-  pivot_wider(names_from = threshold, values_from = proportion) %>% 
-  mutate(abs_increase = peak - `2w`,
-         abs_decrease = `2c` - peak,
-         relative_diff = (`2w`-`2c`)/`2w`*100) %>% 
-  pivot_longer(cols = c(abs_increase, abs_decrease, relative_diff)) %>% 
-  group_by(name) %>% 
-  summarise(min = min(value),
-            max = max(value)) 
-
-# Stats
-model_median2 %>% 
-  left_join(model_range2, by = "name")
+  mutate(proportion = exposed/total_species * 100) %>% 
+  select(-exposed) %>% 
+  pivot_wider(
+    names_from = threshold, 
+    values_from = proportion
+    ) %>% 
+  mutate(
+    abs_increase = peak - `2w`,
+    abs_decrease = `2c` - peak,
+    relative_diff = (`2w`-`2c`)/`2w`*100
+    ) %>% 
+  pivot_longer(
+    cols = where(is.numeric),
+    names_to = "variable",
+    values_to = "value"
+  ) %>%
+  group_by(variable) %>%
+  summarise(
+    median = median(value, na.rm = TRUE),
+    min = min(value, na.rm = TRUE),
+    max = max(value, na.rm = TRUE)
+  ) %>% 
+  mutate(
+    variable = factor(variable, 
+                      levels = c("2w", "peak", "2c", "abs_increase", "abs_decrease", "relative_diff")
+                      )) %>% 
+  arrange(variable) %>% 
+  mutate(across(where(is.numeric), ~round(.x, digits = 1)))
+  
+stats
 
 # 3. Correlation ----
+
 risk_thresholds_models %>% 
   filter(threshold %in% c("2w", "peak", "2c")) %>% 
-  group_by(model, threshold) %>% 
   filter(range_exposed >= 0.8) %>%
-  summarise(all_species = length(unique(species))) %>% 
+  group_by(model, threshold) %>% 
+  count(name = "exposed") %>% 
   ungroup() %>% 
-  mutate(proportion = round(all_species/total_species * 100, 1)) %>% 
-  select(-all_species) %>% 
-  pivot_wider(names_from = threshold, values_from = proportion) %>% 
+  mutate(proportion = exposed/total_species * 100) %>% 
+  select(-exposed) %>% 
+  pivot_wider(
+    names_from = threshold, 
+    values_from = proportion
+    ) %>% 
   left_join(os, by = "model") %>% 
   summarise(
     cor_results = list(tidy(cor.test(peak, magnitude, method = "spearman")))
