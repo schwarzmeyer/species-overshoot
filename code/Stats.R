@@ -1,18 +1,181 @@
 # this code calculated the stats presented in the paper
 
-data_median <- readRDS(here("results/risk/risk_raw_median.rds"))
-
 amph <- readRDS(here("processed_data/species_data/range_maps_grid_cells/Amphibians.rds"))
 bird <- readRDS(here("processed_data/species_data/range_maps_grid_cells/Birds.rds"))
 mamm <- readRDS(here("processed_data/species_data/range_maps_grid_cells/Mammals.rds"))
 rept <- readRDS(here("processed_data/species_data/range_maps_grid_cells/Reptiles.rds"))
 fish <- readRDS(here("processed_data/species_data/range_maps_grid_cells/Fishes.rds"))
 
+os <- readRDS(here("processed_data/climate_data/overshoot_times/overshoot_times.rds"))
 
 range_data <- c(amph, bird, mamm, rept, fish) 
 
 total_populations <- sum(sapply(range_data, function(x) length(x)))
 total_species <- length(unique(names(range_data)))
+
+risk_raw_models <- readRDS(here("results/risk/risk_raw_models.rds"))
+risk_thresholds_models <- readRDS(here("results/risk/risk_thresholds_models.rds"))
+risk_thresholds_median <- readRDS(here("results/risk/risk_thresholds_median.rds"))
+
+# Stats from the 2nd paragraph of the results
+
+# Total number of species analyzed:
+total_species
+
+# 1. Total number of species at risk from severe exposure at 2°C warming, peak and 2°C cooling ----
+
+# Median
+model_median <- risk_thresholds_median %>% 
+  filter(threshold %in% c("2w", "peak", "2c")) %>% 
+  group_by(threshold) %>% 
+  filter(range_exposed >= 0.8) %>%
+  summarise(all_species = length(unique(species))) %>% 
+  ungroup() %>% 
+  mutate(median = round(all_species/total_species * 100, 1))
+
+# Multimodel
+model_range <- risk_thresholds_models %>% 
+  filter(threshold %in% c("2w", "peak", "2c")) %>% 
+  group_by(model, threshold) %>% 
+  filter(range_exposed >= 0.8) %>%
+  summarise(all_species = length(unique(species))) %>% 
+  ungroup() %>% 
+  mutate(proportion = round(all_species/total_species * 100, 1)) %>% 
+  group_by(threshold) %>% 
+  summarise(min = min(proportion),
+            max = max(proportion))
+
+# Stats
+model_median %>% 
+  left_join(model_range, by = "threshold")
+
+# 2. Differences across thresholds ----
+# Absolute increase from 2w to peak
+# Absolute decrease from peak to 2c
+# Relative difference from 2w to 2c
+
+# Median
+model_median2 <- model_median %>% 
+  select(-all_species) %>% 
+  pivot_wider(names_from = threshold, values_from = median) %>% 
+  mutate(abs_increase = peak - `2w`,
+         abs_decrease = `2c` - peak,
+         relative_diff = (`2w`-`2c`)/`2w`*100) %>% 
+  pivot_longer(cols = c(abs_increase, abs_decrease, relative_diff),
+               values_to = "median") %>% 
+  select(name, median)
+
+# Multimodel 
+model_range2 <- risk_thresholds_models %>% 
+  filter(threshold %in% c("2w", "peak", "2c")) %>% 
+  group_by(model, threshold) %>% 
+  filter(range_exposed >= 0.8) %>%
+  summarise(all_species = length(unique(species))) %>% 
+  ungroup() %>% 
+  mutate(proportion = round(all_species/total_species * 100, 1)) %>% 
+  select(-all_species) %>% 
+  pivot_wider(names_from = threshold, values_from = proportion) %>% 
+  mutate(abs_increase = peak - `2w`,
+         abs_decrease = `2c` - peak,
+         relative_diff = (`2w`-`2c`)/`2w`*100) %>% 
+  pivot_longer(cols = c(abs_increase, abs_decrease, relative_diff)) %>% 
+  group_by(name) %>% 
+  summarise(min = min(value),
+            max = max(value)) 
+
+# Stats
+model_median2 %>% 
+  left_join(model_range2, by = "name")
+
+# 3. Correlation ----
+risk_thresholds_models %>% 
+  filter(threshold %in% c("2w", "peak", "2c")) %>% 
+  group_by(model, threshold) %>% 
+  filter(range_exposed >= 0.8) %>%
+  summarise(all_species = length(unique(species))) %>% 
+  ungroup() %>% 
+  mutate(proportion = round(all_species/total_species * 100, 1)) %>% 
+  select(-all_species) %>% 
+  pivot_wider(names_from = threshold, values_from = proportion) %>% 
+  left_join(os, by = "model") %>% 
+  summarise(
+    cor_results = list(tidy(cor.test(peak, magnitude, method = "spearman")))
+  ) %>%
+  unnest(cor_results) 
+
+
+
+
+model_median %>% 
+  left_join(model_range, by = "threshold") %>% 
+  pivot_longer(cols = c(median, min, max, all_species)) %>% 
+  pivot_wider(names_from = threshold) %>% 
+  mutate(abs_increase = peak - `2w`,
+         abs_decrease = `2c` - peak,
+         relative_diff = (`2w`-`2c`)/`2w`)
+
+# Absolute 
+
+risk_thresholds_models %>% 
+  filter(threshold %in% c("2w", "peak", "2c")) %>% 
+  group_by(model, threshold) %>% 
+  filter(range_exposed >= 0.8) %>%
+  summarise(all_species = length(unique(species))) %>% 
+  ungroup() %>% 
+  mutate(proportion = round(all_species/total_species * 100, 1)) %>% 
+  select(-all_species) %>% 
+  pivot_wider(names_from = threshold, values_from = proportion) %>% 
+  mutate(increase = (`2w`-`2c`) / `2w`,
+         diff_peak = `peak` - `2w`,
+         diff_2c = `peak` - `2c`)
+
+
+risk_raw_models %>% 
+  group_by(model) %>% 
+  filter(range_exposed >= 0.8) %>%
+  summarise(all_species = length(unique(species))) %>% 
+  mutate(proportion = round(all_species/total_species*100, 1)) %>% 
+  arrange(proportion)
+
+
+data_models %>% 
+  group_by(model) %>% 
+  filter(range_exposed >= 0.8) %>%
+  summarise(all_species = length(unique(species))) %>% 
+  mutate(proportion = round(all_species/total_species*100, 1)) %>% 
+  arrange(proportion)
+
+
+data_thresh_summary %>% 
+  left_join(os, by = "model") %>% 
+  ggplot(aes(y = `2c`, x = magnitude)) +
+  geom_point() +
+  geom_smooth(method = "lm")
+
+
+
+data_thresh_m %>% 
+  filter(threshold %in% c("2w", "peak", "2c")) %>% 
+  group_by(threshold) %>% 
+  filter(range_exposed >= 0.8) %>%
+  summarise(all_species = length(unique(species))) %>% 
+  ungroup() %>% 
+  mutate(proportion = round(all_species/total_species*100, 1)) %>% 
+  # select(-all_species) %>% 
+  pivot_wider(names_from = threshold, values_from = proportion)
+
+data_models %>% 
+  group_by(model) %>% 
+  summarise(mean(range_exposed), mean(mean_local_duration))
+
+
+data_median <- readRDS(here("results/risk/risk_raw_median.rds"))
+
+data_median %>% 
+  filter(range_exposed >= 0.8,
+         mean_local_duration >= 100)
+
+
 
 # median number of populations exposed
 round(sum(data_median$n_cells_exposed)/total_populations*100,1)
@@ -22,8 +185,8 @@ round(length(unique(data_median$species))/total_species*100,1)
 
 round(length(unique(data_median$species))/total_species*100,1)
 
-qrange <- 0.8
-qduration <- 100
+qrange <- 0.1
+qduration <- 50
 
 species_at_risk <- data_median %>% 
   filter(mean_local_duration >= qduration,
@@ -32,6 +195,8 @@ species_at_risk <- data_median %>%
   nrow()
 
 species_at_risk/total_species*100
+
+
 
 # range across models
 data_models <- readRDS(paste0(path, "Results/Risk Metric/risk_raw_models.rds"))
