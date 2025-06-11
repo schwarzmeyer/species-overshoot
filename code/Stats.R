@@ -63,6 +63,59 @@ stats <- risk_thresholds_models %>%
   
 stats
 
+risk_thresholds_models %>% 
+  filter(threshold %in% c("2w", "peak", "2c")) %>% 
+  filter(range_exposed >= 0.8) %>%
+  group_by(model, threshold) %>% 
+  count(name = "exposed") %>% 
+  ungroup() %>% 
+  mutate(proportion = exposed/total_species * 100) %>% 
+  select(-exposed) %>% 
+  pivot_wider(
+    names_from = threshold, 
+    values_from = proportion
+  ) %>% 
+  mutate(
+    abs_increase = peak - `2w`,
+    abs_decrease = `2c` - peak,
+    rel_increase = ((peak - `2w`) / `2w`) * 100,
+    rel_decrease = ((peak - `2c`) / `2w`) * 100,
+    rel_diff = (`2w`-`2c`)/`2w`*100
+  ) %>% 
+  left_join(os %>% 
+              select(model, magnitude), by = "model") %>% 
+  mutate(abs_inc_by_0.1C = abs_increase / magnitude / 10,
+         abs_dec_by_0.1C = abs_decrease / magnitude / 10,
+         rel_increase_by_0.1C = rel_increase / magnitude / 10,
+         rel_decrease_by_0.1C = rel_decrease / magnitude / 10) 
+
+risk_thresholds_models %>% 
+  filter(threshold %in% c("2w", "peak", "2c")) %>% 
+  filter(range_exposed >= 0.8) %>%
+  group_by(model, threshold) %>% 
+  count(name = "exposed") %>% 
+  ungroup() %>% 
+  mutate(proportion = exposed/total_species * 100) %>% 
+  select(-exposed) %>% 
+  pivot_wider(
+    names_from = threshold, 
+    values_from = proportion
+  ) %>% 
+  mutate(
+    abs_increase = peak - `2w`,
+    abs_decrease = `2c` - peak,
+    rel_increase = ((peak - `2w`) / `2w`) * 100,
+    rel_decrease = ((peak - `2c`) / `2w`) * 100,
+    rel_diff = (`2w`-`2c`)/`2w`*100
+  ) %>% 
+  left_join(os %>% 
+              select(model, magnitude), by = "model") %>% 
+  mutate(abs_inc_by_0.1C = abs_increase / magnitude / 10,
+         abs_dec_by_0.1C = abs_decrease / magnitude / 10,
+         rel_increase_by_0.1C = rel_increase / magnitude / 10,
+         rel_decrease_by_0.1C = rel_decrease / magnitude / 10) 
+
+
 # 3. Correlation ----
 
 risk_thresholds_models %>% 
