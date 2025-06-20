@@ -1,5 +1,12 @@
-if(!requireNamespace("pacman", quietly = TRUE)) install.packages("pacman")
-if(!requireNamespace("rnaturalearthhires", quietly = TRUE)) install.packages("rnaturalearthhires")
+if (!requireNamespace("pacman", quietly = TRUE)) install.packages("pacman")
+if (!requireNamespace("rnaturalearthhires", quietly = TRUE)) {remotes::install_github("ropensci/rnaturalearthhires")
+
+install.packages(
+  "rnaturalearthhires",
+  repos = "https://ropensci.r-universe.dev",
+  type = "source"
+  )
+}
 
 library(pacman)
 
