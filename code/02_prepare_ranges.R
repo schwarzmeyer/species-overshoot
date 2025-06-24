@@ -12,7 +12,7 @@ print("Running: 02_prepare_ranges.R")
 
 # function to filter ranges
 prepare_range <- function(range_data, realm = "terrestrial"){
-   
+  
   
   # filter presence (extant), origin (native and reintroduced), and seasonal (resident and breeding)
   range_filtered <- range_data %>%
@@ -21,7 +21,7 @@ prepare_range <- function(range_data, realm = "terrestrial"){
                   seasonal %in% c(1,2))
   
   if(realm == "terrestrial" & "terrestial" %in% names(range_data)){
-
+    
     range_filtered <- range_filtered %>% 
       dplyr::filter(terrestial == "true")
     
@@ -39,18 +39,24 @@ prepare_range <- function(range_data, realm = "terrestrial"){
 
 # function to transform shp into gridded format
 
-shp_to_grid <- function(species_name, shapefiles, r){
+shp_to_grid <- function(raster_template, shapefiles, r){
   
-  spp_range <- shapefiles[which(shapefiles$sci_name == species_name),]
-  spp_range <- st_transform(spp_range, crs = crs(r))
-  spp_range <- vect(spp_range)
-  output <- terra::extract(r, spp_range, touches = TRUE, ID = FALSE, weights = TRUE, exact = TRUE) %>% 
+  result <- exact_extract(raster_template, shapefiles, include_cols = "sci_name")
+  
+  result %>% 
+    bind_rows() %>% 
     as_tibble() %>% 
-    mutate(range_proportion = weight / sum(weight)) %>% 
-    na.omit()
+    rename(world_id = value,
+           species = sci_name) %>% 
+    mutate(world_id = as.integer(world_id)) %>% 
+    group_by(species) %>% 
+    arrange(species) %>% 
+    mutate(weigth = sum(coverage_fraction)) %>% 
+    mutate(range_proportion = coverage_fraction / weigth) %>% 
+    ungroup() %>% 
+    select(species, world_id, coverage_fraction, range_proportion) %>% 
+    mutate(species = factor(species))
   
-  return(output)
-
 }
 
 
@@ -58,7 +64,6 @@ shp_to_grid <- function(species_name, shapefiles, r){
 # create raster template
 r_template <- rast()
 values(r_template) <- 1:ncell(r_template)
-names(r_template) <- "world_id"
 
 sf_use_s2(FALSE)
 
@@ -68,16 +73,6 @@ world <- ne_countries(scale = "large", returnclass = "sf") %>%
 
 r_template_terrestrial <- r_template %>% 
   crop(world, touches = TRUE, mask = TRUE, snap = "out")
-
-terrestrial_ids <- values(r_template_terrestrial) %>% 
-  na.omit() %>% 
-  as.integer() %>% 
-  unique()
-
-
-# set number of cores
-n_cores <- 7
-
 
 
 #####################################################################
@@ -90,13 +85,11 @@ ranges <- read_sf(here("raw_data/species_data/range_maps_iucn/AMPHIBIANS/AMPHIBI
 ranges <- prepare_range(ranges)
 species <- sort(unique(ranges$sci_name))
 
-spp_data <- pbmclapply(species, shp_to_grid, shapefiles = ranges, r = r_template_terrestrial, mc.cores = n_cores) %>% 
-  set_names(species)
-
+spp_data <- shp_to_grid(r_template_terrestrial, ranges)
 
 # write result
 saveRDS(spp_data, here("processed_data/species_data/range_maps_grid_cells/Amphibians.rds"))
- 
+
 # write species attribute table
 ranges_df <- st_drop_geometry(ranges)
 write.csv2(ranges_df, here("processed_data/species_data/attribute_tables/Amphibians.csv"), row.names = FALSE)
@@ -108,8 +101,7 @@ ranges <- read_sf(here("raw_data/species_data/range_maps_iucn/MAMMALS_TERRESTRIA
 ranges <- prepare_range(ranges)
 species <- sort(unique(ranges$sci_name))
 
-spp_data <- pbmclapply(species, shp_to_grid, shapefiles = ranges, r = r_template_terrestrial, mc.cores = n_cores) %>% 
-  set_names(species)
+spp_data <- shp_to_grid(r_template_terrestrial, ranges)
 
 # write result
 saveRDS(spp_data, here("processed_data/species_data/range_maps_grid_cells/Mammals.rds"))
@@ -121,16 +113,15 @@ toc()
 
 # reptiles ----
 tic("-- Running time: Reptiles")
-ranges1 <- read_sf(here("raw_data/species_data/range_maps_iucn/REPTILES/REPTILES_PART1.shp"))
-ranges2 <- read_sf(here("raw_data/species_data/range_maps_iucn/REPTILES/REPTILES_PART2.shp"))
-ranges1 <- dplyr::select(ranges1, -OBJECTID)
-ranges <- rbind(ranges1, ranges2)
+ranges_1 <- read_sf(here("raw_data/species_data/range_maps_iucn/REPTILES/REPTILES_PART1.shp"))
+ranges_2 <- read_sf(here("raw_data/species_data/range_maps_iucn/REPTILES/REPTILES_PART2.shp"))
+ranges_1 <- dplyr::select(ranges_1, -OBJECTID)
+ranges <- rbind(ranges_1, ranges_2)
 
 ranges <- prepare_range(ranges)
 species <- sort(unique(ranges$sci_name))
 
-spp_data <- pbmclapply(species, shp_to_grid, shapefiles = ranges, r = r_template_terrestrial, mc.cores = n_cores) %>% 
-  set_names(species)
+spp_data <- shp_to_grid(r_template_terrestrial, ranges)
 
 # write result
 saveRDS(spp_data, here("processed_data/species_data/range_maps_grid_cells/Reptiles.rds"))
@@ -142,13 +133,20 @@ toc()
 
 # birds ----
 tic("-- Running time: Birds")
-ranges <- st_read(here("raw_data/species_data/range_maps_iucn/BIRDS/BOTW.gdb"), layer = "All_Species")
+# ranges <- st_read(here("raw_data/species_data/range_maps_iucn/BIRDS/BOTW.gdb"), layer = "All_Species")
+ranges <- st_read(here("raw_data/species_data/range_maps_iucn/BIRDS/BOTW.gdb"), 
+                  query = "SELECT * 
+                        FROM \"All_Species\" 
+                        WHERE 
+                            \"seasonal\" IN (1, 2) AND 
+                            \"presence\" = 1 AND 
+                            \"origin\" IN (1, 2)")
+
+
 ranges <- st_cast(ranges, "MULTIPOLYGON")
 ranges <- prepare_range(ranges)
-species <- sort(unique(ranges$sci_name))
 
-spp_data <- pbmclapply(species, shp_to_grid, shapefiles = ranges, r = r_template_terrestrial, mc.cores = n_cores) %>% 
-  set_names(species)
+spp_data <- shp_to_grid(r_template_terrestrial, ranges)
 
 saveRDS(spp_data, here("processed_data/species_data/range_maps_grid_cells/Birds.rds"))
 
@@ -168,8 +166,7 @@ ranges <- rbind(ranges1, ranges2, ranges3)
 ranges <- prepare_range(ranges, realm = "marine")
 species <- sort(unique(ranges$sci_name))
 
-spp_data <- pbmclapply(species, shp_to_grid, shapefiles = ranges, r = r_template, mc.cores = n_cores) 
-spp_data <- spp_data %>% set_names(species)
+spp_data <- shp_to_grid(r_template, ranges)
 
 # write result
 saveRDS(spp_data, here("processed_data/species_data/range_maps_grid_cells/Fishes.rds"))
