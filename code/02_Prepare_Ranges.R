@@ -1,6 +1,6 @@
 source("code/00_packages.R")
 
-print("Running: 02_prepare_ranges.R")
+print("Running: 02_Prepare_Ranges.R")
 
 # script to transform IUCN ranges to the gridded format.
 
@@ -176,4 +176,4 @@ ranges_df <- st_drop_geometry(ranges)
 write.csv2(ranges_df, here("processed_data/species_data/attribute_tables/Fishes.csv"), row.names = FALSE)
 toc()
 
-print("DONE: 02_prepare_ranges.R")
+print("DONE: 02_Prepare_Ranges.R")

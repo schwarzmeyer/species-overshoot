@@ -1,7 +1,7 @@
-source("code/00_packages.R")
+source("code/00_Packages.R")
 # script to extract climate data to the ocean and land grids
 
-print("Running: 01_prepare_climate_data.R")
+print("Running: 01_Prepare_Climate_Data.R")
 
 #############################################################
 
@@ -240,10 +240,5 @@ os <- begin_os %>%
 
 saveRDS(os, here("processed_data/climate_data/overshoot_times/overshoot_times.rds"))
 
-print("DONE: 01_prepare_climate_data.R")
+print("DONE: 01_Prepare_Climate_Data.R")
 
-os %>% 
-  mutate(begin_to_peak = year_peak - begin_os,
-         peak_to_end = end_os - year_peak) %>% 
-  mutate(begin_to_peak_x = begin_to_peak / duration,
-         peak_to_end_x = peak_to_end / duration) 
