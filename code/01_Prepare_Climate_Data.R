@@ -43,25 +43,25 @@ prepare_climate_data <- function(data, r_template, realm = "land"){
   
   if(realm == "land") {
     
-    world <- ne_countries(scale = "large", returnclass = "sf") %>% 
-      st_transform(crs = crs(r))
+    world <- ne_countries(scale = "large", returnclass = "sf") |>  
+      st_transform(crs = crs(r)) 
     
-    r <- r %>% 
+    r <- r |> 
       mask(world, touches = TRUE) 
   }
   
-  id_tbl <- r_template %>% 
-    as.data.frame(xy = T) %>% 
-    as_tibble() %>% 
+  id_tbl <- r_template |> 
+    as.data.frame(xy = T) |> 
+    as_tibble() |> 
     rename(lon = x, lat = y) 
   
-  r <- r %>% 
-    as.data.frame(xy = T) %>% 
-    as_tibble() %>% 
-    rename(lon = x, lat = y) %>% 
-    left_join(id_tbl, by = c("lon", "lat")) %>% 
-    relocate(world_id) %>% 
-    select(-c(lon, lat)) %>% 
+  r <- r |> 
+    as.data.frame(xy = T) |> 
+    as_tibble() |> 
+    rename(lon = x, lat = y) |> 
+    left_join(id_tbl, by = c("lon", "lat")) |> 
+    relocate(world_id) |> 
+    select(-c(lon, lat)) |> 
     drop_na(world_id)
   
   column_names <- str_replace(colnames(r), "y_", "")
@@ -76,12 +76,12 @@ for(.model in models){
     
     tic(glue("-- Running time: {.model} {.variable}"))
     
-    netcdfs_tmp <- grep(.variable, netcdfs, value = T)
-    models_tmp  <- grep(.model, netcdfs_tmp, value = T)
+    netcdfs_tmp <- grepv(.variable, netcdfs)
+    models_tmp  <- grepv(.model, netcdfs_tmp)
     
-    models_historical <- grep("historical", models_tmp, value = T)
-    models_ssp585     <- grep("ssp585", models_tmp, value = T)
-    models_ssp534     <- grep("ssp534", models_tmp, value = T)
+    models_historical <- grepv("historical", models_tmp)
+    models_ssp585     <- grepv("ssp585", models_tmp)
+    models_ssp534     <- grepv("ssp534", models_tmp)
     
     realm <- ifelse(.variable == "tas", "land", "ocean")
     
@@ -96,9 +96,9 @@ for(.model in models){
     if(.model != "CNRM-ESM2-1"){
       
       result <- left_join(r_historical, 
-                         r_ssp585 %>% select(world_id, as.character(2015:2040)), 
-                         by = "world_id") %>% 
-               left_join(r_ssp534 %>% select(world_id, as.character(2041:2299)), 
+                         r_ssp585 |> select(world_id, as.character(2015:2040)), 
+                         by = "world_id") |> 
+               left_join(r_ssp534 |> select(world_id, as.character(2041:2299)), 
                          by = "world_id")
         
       } else {
@@ -107,8 +107,8 @@ for(.model in models){
   
       }
     
-    result <- result %>% 
-      pivot_longer(-1, names_to = "year", values_to = "temp") %>% 
+    result <- result |> 
+      pivot_longer(-1, names_to = "year", values_to = "temp") |> 
       mutate(world_id = as.integer(world_id),
              year = as.integer(year),
              temp = as.integer(round(temp, 3) * 1000))
@@ -126,7 +126,7 @@ for(.model in models){
 # Load files
 scenarios <- c("historical","ssp534","ssp585")
 netcdfs <- list.files(here("raw_data/climate_data/CMIP6/Overshoot"), ".nc", recursive = T, full.names = T)
-netcdfs <- grep("tas", netcdfs, value = T)
+netcdfs <- grepv("tas", netcdfs)
 models <- c("ACCESS-ESM1-5","CNRM-ESM2-1","GISS-E2-1-G","IPSL-CM6A-LR","MRI-ESM2-0")
 
 global_averages <- function(data){
@@ -134,15 +134,15 @@ global_averages <- function(data){
   r <- rast(data)
   r <- tapp(r, index = "years", fun = mean, na.rm = TRUE, cores = 5)
 
-  avgs <- expanse(r, unit = "km", byValue = T) %>%
-    as_tibble() %>%
-    na.omit() %>%
-    mutate(area = area/10000) %>%
-    mutate(w.value = value * area) %>%
-    group_by(layer) %>%
+  avgs <- expanse(r, unit = "km", byValue = T) |>
+    as_tibble() |>
+    na.omit() |>
+    mutate(area = area/10000) |>
+    mutate(w.value = value * area) |>
+    group_by(layer) |>
     summarise(sum.w.value = sum(w.value),
-              sum.area = sum(area)) %>%
-    mutate(global.temp = (sum.w.value/sum.area) - 273.15) %>%
+              sum.area = sum(area)) |>
+    mutate(global.temp = (sum.w.value/sum.area) - 273.15) |>
     pull(global.temp)
     
   return(avgs)
@@ -154,11 +154,11 @@ for(.model in models){
 
   tic(glue("-- Running time: {.model}"))
   
-  models_tmp <- grep(.model, netcdfs, value = T)
+  models_tmp <- grepv(.model, netcdfs)
 
-  models_historical <- grep("historical", models_tmp, value = T)
-  models_ssp585     <- grep("ssp585", models_tmp, value = T)
-  models_ssp534     <- grep("ssp534", models_tmp, value = T)
+  models_historical <- grepv("historical", models_tmp)
+  models_ssp585     <- grepv("ssp585", models_tmp)
+  models_ssp534     <- grepv("ssp534", models_tmp)
 
   temp_hist   <- global_averages(models_historical)
   temp_ssp585 <- global_averages(models_ssp585)
@@ -188,54 +188,60 @@ for(.model in models){
 
 res_final <- bind_rows(res_list)
 
+res_final <- res_final |> 
+  mutate(temperature_rolling = round(temperature_rolling, 2))
+
 saveRDS(res_final, here("processed_data/climate_data/global_averages/global_averages.rds"))
 
 
 # calculate overshoot times
 global_averages <- readRDS(here("processed_data/climate_data/global_averages/global_averages.rds"))
 
-gwl <- global_averages %>%
-  group_by(model) %>%
-  mutate(pre_industrial_avg = mean(temperature[year <= 1900])) %>%
+gwl <- global_averages |>
+  group_by(model) |>
+  mutate(pre_industrial_avg = mean(temperature[year <= 1900])) |>
   mutate(gwl = temperature - pre_industrial_avg,
-         gwl_rolling = temperature_rolling - pre_industrial_avg) %>%
-  mutate(os = ifelse(gwl_rolling > 2, gwl_rolling, NA)) %>%
-  mutate(os = ifelse(model == "CNRM-ESM2-1" & year > 2179, NA, os)) %>%
-  filter(year >= 2014,
-         year <= 2220)
+         gwl_rolling = temperature_rolling - pre_industrial_avg) |>
+  mutate(os = ifelse(gwl_rolling > 2, gwl_rolling, NA)) |>
+  mutate(os = ifelse(model == "CNRM-ESM2-1" & year > 2179, NA, os)) |>
+  filter(year >= 2015,
+         year <= 2220) |> 
+  mutate(gwl_rolling = round(gwl_rolling, 2))
 
-begin_os <- gwl %>%
-  group_by(model) %>%
-  filter(gwl_rolling > 2) %>%
-  slice_min(year) %>%
-  select(model, year) %>%
+begin_os <- gwl |>
+  group_by(model) |>
+  filter(gwl_rolling > 2) |>
+  slice_min(year) |>
+  select(model, year) |>
   rename("begin_os" = year)
 
-end_os <- gwl %>%
-  filter(year > 2050) %>%
-  group_by(model) %>%
-  filter(gwl_rolling <= 2) %>%
-  slice(1) %>%
-  select(model, year) %>%
+end_os <- gwl |>
+  filter(year > 2050) |>
+  group_by(model) |>
+  filter(gwl_rolling <= 2) |>
+  slice(1) |>
+  select(model, year) |>
   rename("end_os" = year)
 
-peak_gwl <- gwl %>%
-  group_by(model) %>%
-  slice_max(gwl_rolling) %>%
-  select(model, gwl_rolling) %>%
-  rename("magnitude" = gwl_rolling) %>%
-  mutate(magnitude = magnitude - 2)
+peak_gwl <- gwl |>
+  group_by(model) |>
+  slice_max(gwl_rolling) |>
+  select(model, gwl_rolling) |>
+  rename("magnitude" = gwl_rolling) |>
+  mutate(magnitude = magnitude - 2) |> 
+  distinct()
 
-peak_year <- gwl %>%
-  group_by(model) %>%
-  slice_max(gwl_rolling) %>% 
-  select(model, year) %>%
-  rename(year_peak = year) 
+peak_year <- gwl |>
+  group_by(model) |>
+  slice_max(gwl_rolling) |> 
+  select(model, year) |>
+  rename(year_peak = year) |> 
+  summarise(year_peak = round(median(year_peak), 0))
 
-os <- begin_os %>%
-  left_join(end_os, by = "model") %>%
-  left_join(peak_gwl, by = "model") %>%
-  left_join(peak_year, by = "model") %>%
+os <- begin_os |>
+  left_join(end_os, by = "model") |>
+  left_join(peak_gwl, by = "model") |>
+  left_join(peak_year, by = "model") |>
   mutate(duration = end_os - begin_os)
 
 saveRDS(os, here("processed_data/climate_data/overshoot_times/overshoot_times.rds"))
