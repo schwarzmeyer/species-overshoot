@@ -180,7 +180,7 @@ for(.model in models){
   result <- tibble(model = .model,
                   year = 1850:2299,
                   temperature = time_series,
-                  temperature_rolling = rollapply(time_series, width = 20, FUN = mean, align = "center", fill = NA))
+                    temperature_rolling = rollapply(time_series, width = 20, FUN = mean, align = "center", fill = NA))
 
   toc()
   res_list <- append(res_list, list(result))

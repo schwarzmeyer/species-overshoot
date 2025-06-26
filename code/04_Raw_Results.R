@@ -1,3 +1,7 @@
+source("code/00_Packages.R")
+
+print("Running: 04_Raw_Results.R")
+
 # script to generate the raw results used to construct the horizons profiles
 
 ############################################################
@@ -7,97 +11,101 @@
 # for the species in a given year. the cell is assigned with 0 if the climate is unsuitable.
  
 spp_ranges <- list.files(here("processed_data/species_data/range_maps_grid_cells"), full.names = T)
-spp_names <- list.files(here("processed_data/species_data/range_maps_grid_cells"), full.names = F)
-
 temp_matrices <- list.files(here("processed_data/climate_data/temperature_matrices"), full.names = T)
-temp_matrices_ocean <- grep("ocean", temp_matrices, value = T)
-
-niche_data_raw <- list.files(here("processed_data/species_data/niche_limits/raw"), full.names = T)
-
+niche_limits <- readRDS(here("processed_data/species_data/niche_limits/niche_limits.rds"))
 models <- c("ACCESS-ESM1-5","CNRM-ESM2-1","GISS-E2-1-G","IPSL-CM6A-LR","MRI-ESM2-0")
-
 groups <- c("Amphibians","Birds","Fishes","Mammals","Reptiles")
+groups <- c("Birds","Fishes","Mammals","Reptiles")
+
+n_cores <- 2
 
 
-get_raw_results <- function(x){
+# .species <- species[7147]
+# climate_data <- temp_tbl
+# niche_data <- niche
+
+get_raw_results <- function(.species, climate_data, niche_data){
   
-  spp_data <- species_range[[x]]
-  spp_name <- names(species_range)[[x]]
+  spp_data <- species_range[[.species]]
   
-  spp_matrix <- temp_matrix %>% 
-    filter(WorldID %in% spp_data) %>% 
+  spp_matrix <- climate_data |> 
+    filter(world_id %in% spp_data) |> 
     na.omit()
   
-  spp_niche <- niche %>%
-    filter(species %in% spp_name)
+  spp_niche <- niche_data$niche_max[niche_data$species == .species]
   
+  result <- spp_matrix |> 
+    mutate(across(-world_id, ~ ifelse(. > spp_niche, 1L, 0L))) |> 
+    mutate(species = factor(.species)) |>
+    relocate(species) 
+
   
-  spp_matrix <- spp_matrix %>% 
-    mutate(across(2:ncol(spp_matrix), ~ case_when(. <= spp_niche$niche_max ~ 1,
-                                                  . > spp_niche$niche_max ~ 0)))
-  
-  spp_matrix$species <- spp_name
-  spp_matrix <- spp_matrix %>% 
-    relocate(species)
-  
-  return(spp_matrix)
+  return(result)
   
 }
 
-# running raw climate data 
 
-niche_data <- niche_data_raw
+for(.model in models){
+  for(.group in groups){
+    
+    tic(glue("-- Running time: {.model} {.group}"))
+    
+    .var <- if(.group != "Fishes") "tas" else "tos"
+    
+    temp_tbl <- temp_matrices |> 
+      grepv(pattern = .var) |> 
+      grepv(pattern = .model) |> 
+      readRDS()
+  
+    
+    species_range <- spp_ranges |> 
+      grepv(pattern = .group) |>
+      readRDS()
+    
+    species <- unique(species_range$species) |> 
+      as.character()
+    
+    species_world_ids <- unique(species_range$world_id)
+    
+    species_range <- species_range |>
+      group_by(species) |>
+      summarise(world_ids = list(world_id), .groups = 'drop') |>
+      deframe()
+    
+    temp_tbl <- temp_tbl |> 
+      filter(year > 2014,
+             year < 2221,
+             world_id %in% species_world_ids) |> 
+      pivot_wider(names_from = year,
+                  values_from = temp) 
+    
+    niche <- niche_limits |> 
+      filter(group == .group,
+             model == .model) 
+    
+    result <- mclapply(species,
+                       FUN = get_raw_results,
+                       climate_data = temp_tbl,
+                       niche_data = niche,
+                       mc.cores = n_cores)
+    
+    # result <- result |>
+    #   bind_rows() |>
+    #   mutate(model = factor(.model),
+    #          group = factor(.group))
 
-for(j in seq_along(models)){
-  
-  temp_matrix_tmp <- grep(models[j], temp_matrices, value = T)
-  temp_matrix_land <- readRDS(grep("land", temp_matrix_tmp, value = T))
-  temp_matrix_ocean <- readRDS(grep("ocean", temp_matrix_tmp, value = T))
-  
-  temp_matrix_land <- temp_matrix_land %>% 
-    select(WorldID, as.character(2015:2220))
-  
-  temp_matrix_ocean <- temp_matrix_ocean %>% 
-    select(WorldID, as.character(2015:2220))
-  
-  niche_data_tmp <- grep(models[j], niche_data, value = T)
-  
-  
-  for(i in seq_along(groups)){
+    # write_parquet(result, here(glue("results/raw_results/{.model}_{.group}.parquet")))
     
-    species_range <- readRDS(grep(groups[i], spp_ranges, value = T))
-    niche <- readRDS(grep(groups[i], niche_data_tmp, value = T))
+    saveRDS(result,
+            here(glue("results/raw_results/{.model}_{.group}.rds")))
     
-    cl <- makeCluster(detectCores() - 1)
-    clusterEvalQ(cl, library(dplyr))
+    rm(result)
     
-    if(any(str_detect(groups[i], c("Amphibians","Birds","Mammals","Reptiles")))) {
-      
-      temp_matrix <- temp_matrix_land
-      clusterExport(cl, c("species_range","temp_matrix","niche"))
-      
-      res <- pblapply(1:length(species_range), get_raw_results, cl = cl)
-      
-    } else {
-      
-      temp_matrix <- temp_matrix_ocean
-      
-      clusterExport(cl, c("species_range","temp_matrix","niche"))
-      
-      res <- pblapply(1:length(species_range), get_raw_results, cl = cl)
-      
-    } 
-  
-    stopCluster(cl)
+    gc()
     
-    names(res) <- names(species_range)
-  
-  
-    saveRDS(res, 
-            file = here(glue("results/raw_results/raw_{models[j]}_{groups[i]}.rds")))
-  
+    toc()
+    
+    }
   }
-} 
-
-
-
+  
+print("DONE: 04_Raw_Results.R")

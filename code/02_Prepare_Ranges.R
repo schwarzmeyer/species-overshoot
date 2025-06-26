@@ -15,21 +15,21 @@ prepare_range <- function(range_data, realm = "terrestrial"){
   
   
   # filter presence (extant), origin (native and reintroduced), and seasonal (resident and breeding)
-  range_filtered <- range_data %>%
+  range_filtered <- range_data |>
     dplyr::filter(presence == 1,
                   origin %in% c(1,2),
                   seasonal %in% c(1,2))
   
   if(realm == "terrestrial" & "terrestial" %in% names(range_data)){
     
-    range_filtered <- range_filtered %>% 
+    range_filtered <- range_filtered |> 
       dplyr::filter(terrestial == "true")
     
   }
   
   if(realm == "marine"){
     
-    range_filtered <- range_filtered %>% 
+    range_filtered <- range_filtered |> 
       dplyr::filter(marine == "true")
     
   }
@@ -43,19 +43,20 @@ shp_to_grid <- function(raster_template, shapefiles, r){
   
   result <- exact_extract(raster_template, shapefiles, include_cols = "sci_name")
   
-  result %>% 
-    bind_rows() %>% 
-    as_tibble() %>% 
+  result |> 
+    bind_rows() |> 
+    as_tibble() |> 
     rename(world_id = value,
-           species = sci_name) %>% 
-    mutate(world_id = as.integer(world_id)) %>% 
-    group_by(species) %>% 
-    arrange(species) %>% 
-    mutate(weigth = sum(coverage_fraction)) %>% 
-    mutate(range_proportion = coverage_fraction / weigth) %>% 
-    ungroup() %>% 
-    select(species, world_id, coverage_fraction, range_proportion) %>% 
-    mutate(species = factor(species))
+           species = sci_name) |> 
+    mutate(world_id = as.integer(world_id)) |> 
+    group_by(species) |> 
+    arrange(species) |> 
+    mutate(weigth = sum(coverage_fraction)) |> 
+    mutate(range_proportion = coverage_fraction / weigth) |> 
+    ungroup() |> 
+    select(species, world_id, coverage_fraction, range_proportion) |> 
+    mutate(species = factor(species)) |> 
+    na.omit()
   
 }
 
@@ -67,11 +68,11 @@ values(r_template) <- 1:ncell(r_template)
 
 sf_use_s2(FALSE)
 
-world <- ne_countries(scale = "large", returnclass = "sf") %>% 
-  st_transform(crs = crs(r_template)) %>% 
+world <- ne_countries(scale = "large", returnclass = "sf") |> 
+  st_transform(crs = crs(r_template)) |> 
   vect()
 
-r_template_terrestrial <- r_template %>% 
+r_template_terrestrial <- r_template |> 
   crop(world, touches = TRUE, mask = TRUE, snap = "out")
 
 
