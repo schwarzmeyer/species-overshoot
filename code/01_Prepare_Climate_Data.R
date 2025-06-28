@@ -21,7 +21,7 @@ prepare_climate_data <- function(data, r_template, realm = "land"){
   # correct historical models with no time associated
   if(any(is.na(terra::time(r))) & nlyr(r) == 1981) {
     
-    r <- subset(r, "area", negate=TRUE)
+    r <- subset(r, "area", negate = TRUE)
     time_values <- seq.Date(from = as.Date("1850-01-01"), 
                             to = as.Date("2014-12-01"), 
                             by = "month")
@@ -51,12 +51,12 @@ prepare_climate_data <- function(data, r_template, realm = "land"){
   }
   
   id_tbl <- r_template |> 
-    as.data.frame(xy = T) |> 
+    as.data.frame(xy = TRUE) |> 
     as_tibble() |> 
     rename(lon = x, lat = y) 
   
   r <- r |> 
-    as.data.frame(xy = T) |> 
+    as.data.frame(xy = TRUE) |> 
     as_tibble() |> 
     rename(lon = x, lat = y) |> 
     left_join(id_tbl, by = c("lon", "lat")) |> 
