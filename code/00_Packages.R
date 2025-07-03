@@ -10,7 +10,8 @@ install.packages(
 
 library(pacman)
 
-p_load(dplyr, terra)
+p_load(here, tidyverse, terra, sf, tictoc, glue, zoo, rnaturalearth, exactextractr, pbmcapply, rphylopic, readxl,
+       colorspace, ggdist, patchwork)
 
 # p_load(arrow, tictoc, colorspace, cowplot, exactextractr, furrr, ggdist, ggExtra,
 #        ggpointdensity, ggpubr, ggthemes, glue, here, pbmcapply, parallel, patchwork, 
