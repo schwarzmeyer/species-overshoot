@@ -1,4 +1,4 @@
-source("code/00_packages.R")
+source("code/00_Packages.R")
 
 print("Running: 02_Prepare_Ranges.R")
 
@@ -86,7 +86,9 @@ ranges <- read_sf(here("raw_data/species_data/range_maps_iucn/AMPHIBIANS/AMPHIBI
 ranges <- prepare_range(ranges)
 species <- sort(unique(ranges$sci_name))
 
-spp_data <- shp_to_grid(r_template_terrestrial, ranges)
+spp_data <- shp_to_grid(r_template_terrestrial, ranges) |> 
+  mutate(group = factor("Amphibians")) |> 
+  relocate(group)
 
 # write result
 saveRDS(spp_data, here("processed_data/species_data/range_maps_grid_cells/Amphibians.rds"))
@@ -102,7 +104,10 @@ ranges <- read_sf(here("raw_data/species_data/range_maps_iucn/MAMMALS_TERRESTRIA
 ranges <- prepare_range(ranges)
 species <- sort(unique(ranges$sci_name))
 
-spp_data <- shp_to_grid(r_template_terrestrial, ranges)
+spp_data <- shp_to_grid(r_template_terrestrial, ranges) |> 
+  mutate(group = factor("Mammals")) |> 
+  relocate(group)
+
 
 # write result
 saveRDS(spp_data, here("processed_data/species_data/range_maps_grid_cells/Mammals.rds"))
@@ -122,7 +127,10 @@ ranges <- rbind(ranges_1, ranges_2)
 ranges <- prepare_range(ranges)
 species <- sort(unique(ranges$sci_name))
 
-spp_data <- shp_to_grid(r_template_terrestrial, ranges)
+spp_data <- shp_to_grid(r_template_terrestrial, ranges) |> 
+  mutate(group = factor("Reptiles")) |> 
+  relocate(group)
+
 
 # write result
 saveRDS(spp_data, here("processed_data/species_data/range_maps_grid_cells/Reptiles.rds"))
@@ -134,20 +142,23 @@ toc()
 
 # birds ----
 tic("-- Running time: Birds")
-# ranges <- st_read(here("raw_data/species_data/range_maps_iucn/BIRDS/BOTW.gdb"), layer = "All_Species")
-ranges <- st_read(here("raw_data/species_data/range_maps_iucn/BIRDS/BOTW.gdb"), 
-                  query = "SELECT * 
-                        FROM \"All_Species\" 
-                        WHERE 
-                            \"seasonal\" IN (1, 2) AND 
-                            \"presence\" = 1 AND 
-                            \"origin\" IN (1, 2)")
+ranges <- st_read(here("raw_data/species_data/range_maps_iucn/BIRDS/BOTW.gdb"), layer = "All_Species")
+# ranges <- st_read(here("raw_data/species_data/range_maps_iucn/BIRDS/BOTW.gdb"), 
+#                   query = "SELECT * 
+#                         FROM \"All_Species\" 
+#                         WHERE 
+#                             \"seasonal\" IN (1, 2) AND 
+#                             \"presence\" = 1 AND 
+#                             \"origin\" IN (1, 2)")
 
 
 ranges <- st_cast(ranges, "MULTIPOLYGON")
 ranges <- prepare_range(ranges)
 
-spp_data <- shp_to_grid(r_template_terrestrial, ranges)
+spp_data <- shp_to_grid(r_template_terrestrial, ranges) |> 
+  mutate(group = factor("Birds")) |> 
+  relocate(group)
+
 
 saveRDS(spp_data, here("processed_data/species_data/range_maps_grid_cells/Birds.rds"))
 
@@ -167,7 +178,10 @@ ranges <- rbind(ranges1, ranges2, ranges3)
 ranges <- prepare_range(ranges, realm = "marine")
 species <- sort(unique(ranges$sci_name))
 
-spp_data <- shp_to_grid(r_template, ranges)
+spp_data <- shp_to_grid(r_template, ranges) |> 
+  mutate(group = factor("Fishes")) |> 
+  relocate(group)
+
 
 # write result
 saveRDS(spp_data, here("processed_data/species_data/range_maps_grid_cells/Fishes.rds"))
