@@ -15,9 +15,8 @@ temp_matrices <- list.files(here("processed_data/climate_data/temperature_matric
 niche_limits <- readRDS(here("processed_data/species_data/niche_limits/niche_limits.rds"))
 models <- c("ACCESS-ESM1-5","CNRM-ESM2-1","GISS-E2-1-G","IPSL-CM6A-LR","MRI-ESM2-0")
 groups <- c("Amphibians","Birds","Fishes","Mammals","Reptiles")
-groups <- c("Birds","Fishes","Mammals","Reptiles")
 
-n_cores <- 2
+n_cores <- 7
 
 
 # .species <- species[7147]
