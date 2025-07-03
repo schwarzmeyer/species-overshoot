@@ -12,10 +12,10 @@ print("Running: 05_Species_Exposure_Times.R")
 # the script truncates the data at the year global warming levels reach reach the threshold.
 # hence, is possible to calculate our metrics at each threshold.
 
-files <- list.files(here("results/raw_results"), rec = F, full.names = T, pattern = ".rds")
+files <- list.files(here("results/raw_results"), rec = FALSE, full.names = TRUE, pattern = ".rds")
 models <- c("ACCESS-ESM1-5", "CNRM-ESM2-1", "GISS-E2-1-G", "IPSL-CM6A-LR", "MRI-ESM2-0")
 groups <- c("Amphibians","Birds","Mammals","Reptiles","Fishes")
-n_cores <- 2
+n_cores <- 10
 
 # get temperature data and calculate global warming levels at each year
 global_temp_avg <- readRDS(here("processed_data/climate_data/global_averages/global_averages.rds"))
@@ -154,8 +154,8 @@ for(.model in models){
                phase = factor(phase))
       
       raw_results <- files |> 
-        grep(.model, ., value = T) |> 
-        grep(.group, ., value = T) |> 
+        grepv(pattern = .model) |> 
+        grepv(pattern = .group) |> 
         readRDS()
       
       tic(glue("-- Running time: {.group} and {.model}"))
@@ -166,7 +166,8 @@ for(.model in models){
       raw_results <- mclapply(X = raw_results, 
                               FUN = function(x){
                                 x |> 
-                                  mutate(sum = rowSums(select(., starts_with("2")))) |>
+                                  # mutate(sum = rowSums(select(., starts_with("2")))) |>
+                                  mutate(sum = rowSums(across(starts_with("2")))) |>
                                   filter(sum >= 5) |>  # select only cells with >=5 exposure years 
                                   select(-sum)
                               },
