@@ -175,6 +175,15 @@ ranges2 <- read_sf(here("raw_data/species_data/range_maps_iucn/MARINEFISH/MARINE
 ranges3 <- read_sf(here("raw_data/species_data/range_maps_iucn/MARINEFISH/MARINEFISH_PART3.shp"))
 ranges <- rbind(ranges1, ranges2, ranges3)
 
+habitats <- read_csv(here("raw_data/species_data/range_maps_iucn/MARINEFISH/redlist_species_data_b34f6874-98b4-43ac-8297-f047a082fb2b/all_other_fields.csv"))
+
+ranges <- ranges |> 
+  left_join(habitats |> 
+              select(internalTaxonId, DepthUpper.limit), by = c("id_no" = "internalTaxonId")) |> 
+  filter(DepthUpper.limit <= 200) # only shallow-water species
+  
+
+
 ranges <- prepare_range(ranges, realm = "marine")
 species <- sort(unique(ranges$sci_name))
 
