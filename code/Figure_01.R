@@ -1,319 +1,239 @@
 # FIGURE 1 
 source("code/00_packages.R")
-groups <- c("Amphibians","Birds","Mammals","Reptiles","Fishes")
 
-# FIGURE 1 
+# load data
+risk_data <- readRDS(here("results/risk/risk_thresholds_models_v2.rds"))
+gwl_thresholds <- readRDS(here("processed_data/climate_data/global_averages/gwl_thresholds.rds"))
 
-#############################################
-#############################################
-#############################################
+group_richness <- list.files(here("processed_data/species_data/range_maps_grid_cells/"), full.names = TRUE) |> 
+  map_dfr(readRDS) |> 
+  group_by(group) |> 
+  mutate(richness = n_distinct(species)) |> 
+  ungroup() |> 
+  select(group, richness) |> 
+  distinct() 
 
-risk_data <- readRDS(here("results/risk/risk_thresholds_models.rds")) 
-range_data <- list.files(here("processed_data/species_data/range_maps_grid_cells/"), full.names = T) 
+group_richness <- group_richness |> 
+  add_row(group = "All species",
+          richness = sum(group_richness$richness))
 
-group_richness <- map_dfr(groups, 
-                          ~ grep(.x, range_data, value = T) %>% 
-                            readRDS() %>% 
-                            names() %>% 
-                            length() %>% 
-                            unique() %>% 
-                            as_tibble()) %>% 
-  mutate(group = groups) %>% 
-  rename(richness = value)
+############# plot a -----
+
+plot_a_data <- risk_data |> 
+  group_by(model, threshold) |> 
+  summarise(p_20 = sum(range_exposed >= 0.2),
+            p_50 = sum(range_exposed >= 0.5),
+            p_80 = sum(range_exposed >= 0.8),
+            .groups = "drop") |> 
+  pivot_longer(cols = c(p_20, p_50, p_80),
+               names_to = "range_exposed",
+               values_to = "n_species") |> 
+  mutate(range_exposed = factor(range_exposed, 
+                                levels = c("p_20", "p_50", "p_80"),
+                                labels = c("≥20%", "≥50%", "≥80%")),
+         perc_species = n_species / 37073,
+         threshold = factor(threshold, levels = c(paste0(seq(1.5, 3, 0.1), "w"),
+                                                  "peak",
+                                                  paste0(seq(3, 1.5, -0.1), "c")))) |> 
+  left_join(gwl_thresholds |> select(model, threshold, gwl), by = c("model", "threshold")) |> 
+  group_by(model, range_exposed) |>
+  filter(!(threshold != "peak" & gwl == gwl[threshold == "peak"] & str_detect(threshold, "c"))) |>
+  ungroup() |>
+  group_by(model, range_exposed) |>
+  mutate(step = row_number()) |>
+  ungroup()
+
+models <- unique(plot_a_data$model)
+
+model_labels <- list(
+  "ACCESS-ESM1-5" = c("1.5", "2", "peak"),
+  "CNRM-ESM2-1"   = c("1.5", "2", "peak"),
+  "GISS-E2-1-G"   = c("1.5", "2", "peak"),
+  "IPSL-CM6A-LR"  = c("1.5", "2", "2.5", "peak"),
+  "MRI-ESM2-0"    = c("1.5", "2", "peak")
+)
 
 
-phylo_color <- alpha("#811c51", 0.9)
+
+x_scales <- imap(models, ~{
+  sub <- plot_a_data |> 
+    filter(model == .x, range_exposed == "≥20%")
+  
+  peak_temp <- sub |> 
+    filter(threshold == "peak") |> 
+    pull(gwl) |> 
+    unique() |> 
+    round(1) |> 
+    as.character()
+  
+  raw_labels <- unique(sub$threshold) |>
+    as.character() |>
+    str_replace("w", "") |>
+    str_replace("c", "")
+  
+  keep_labels <- model_labels[[.x]]
+  display_labels <- ifelse(raw_labels %in% keep_labels, raw_labels, "")
+  label_vec <- setNames(display_labels, unique(as.character(sub$threshold)))
+  label_vec[which(names(label_vec) == "peak")] <- peak_temp
+  
+  keep_steps <- sub$step[sub$threshold %in% names(label_vec[label_vec != ""])]
+  keep_labels_display <- label_vec[label_vec != ""]
+  
+  scale_x_continuous(breaks = keep_steps,
+                     labels = keep_labels_display)
+})
 
 
-risk_data_plot <- risk_data %>% 
-  filter(threshold %in% c("2w", "peak", "2c")) %>%
-  filter(range_exposed >= 0.8) %>%
-  group_by(model, group, threshold) %>% 
-  count(name = "exposed") %>% 
-  group_by(group, threshold) %>% 
-  summarise(exposed_median = median(exposed),
-            exposed_max = max(exposed),
-            exposed_min = min(exposed),
-            .groups = "drop") %>% 
-  left_join(group_richness, by = "group") %>% 
-  mutate(exposed_median = exposed_median / richness * 100,
-         exposed_max = exposed_max / richness * 100,
-         exposed_min = exposed_min / richness * 100) %>% 
-  mutate(threshold = fct_recode(threshold, "2°C before peak" = "2w", "Peak" = "peak", "2°C after peak" = "2c"),
-         group = factor(group, levels = c( "Amphibians", "Birds", "Mammals", "Reptiles", "Fishes"))) %>% 
-  select(-richness)
+############# plot b -----
 
-risk_data_plot_all <- risk_data %>% 
-  filter(threshold %in% c("2w", "peak", "2c")) %>%
-  filter(range_exposed >= 0.8) %>%
-  group_by(model, threshold) %>% 
-  count(name = "exposed") %>% 
-  group_by(threshold) %>% 
-  summarise(exposed_median = median(exposed),
-            exposed_max = max(exposed),
-            exposed_min = min(exposed),
-            .groups = "drop") %>% 
-  mutate(exposed_median = exposed_median / 37688 * 100,
-         exposed_max = exposed_max / 37688 * 100,
-         exposed_min = exposed_min / 37688 * 100) %>% 
-  mutate(threshold = fct_recode(threshold, "2°C before peak" = "2w", "Peak" = "peak", "2°C after peak" = "2c"),
-         group = factor("All species")) %>% 
-  relocate(group) 
 
-all_data <- bind_rows(risk_data_plot, risk_data_plot_all)
+risk_summary <- risk_data |> 
+  bind_rows(risk_data |> mutate(group = "All species")) |>
+  group_by(model, group, threshold) |> 
+  summarise(p_20 = sum(range_exposed >= 0.2),
+            p_50 = sum(range_exposed >= 0.5),
+            p_80 = sum(range_exposed >= 0.8),
+            .groups = "drop") |> 
+  arrange(model, group, threshold) |> 
+  left_join(gwl_thresholds |> select(model, threshold, gwl), by = c("model", "threshold")) |> 
+  group_by(model, group) |>
+  mutate(rate_20 = p_20 - lag(p_20),
+         rate_50 = p_50 - lag(p_50),
+         rate_80 = p_80 - lag(p_80),
+         gwl_diff = abs(gwl - lag(gwl))) |>
+  ungroup() |>
+  mutate(rate_20_std = rate_20 * (0.1 / gwl_diff), 
+         rate_50_std = rate_50 * (0.1 / gwl_diff), 
+         rate_80_std = rate_80 * (0.1 / gwl_diff)) |> 
+  left_join(group_richness, by = "group") |> 
+  # select(model, threshold, gwl, rate_20_std, rate_50_std, rate_80_std) |> 
+  mutate(perc_20_std = rate_20_std / richness,
+         perc_50_std = rate_50_std / richness,
+         perc_80_std = rate_80_std / richness)
 
-p_bar <- ggplot(all_data, aes(x = group, y = exposed_median, fill = threshold)) +
-  geom_col(position = "dodge", width = 0.7) +
-  geom_errorbar(aes(ymin = exposed_min, ymax = exposed_max), width = 0.2, position = position_dodge(width = 0.7),
-                linewidth = 0.4) +
-  scale_fill_viridis_d(option = "F", begin = 0.3, end = 0.8, direction = -1, name = "") +
-  labs(x = "", y = "Species at risk of\nsevere exposure (%)") +
-  scale_y_continuous(expand = c(0,0), limits = c(0,100)) +
-  add_phylopic(uuid = "264fa655-afd7-451c-8f27-e0a9557376e6", fill = phylo_color, # reptiles
-               x = 4, y = 61, height = 15, alpha = 1) +
-  add_phylopic(uuid = "bd80bc51-460c-4dd9-8341-e5b460372efb", fill = phylo_color, # amphibians
-               x = 1, y = 73, height = 13, alpha = 1, horizontal = T) +
-  add_phylopic(uuid = "157d3109-7124-413c-8362-3abcc6889a3f", fill = phylo_color, # birds
-               x = 2, y = 33, height = 14, alpha = 1) +
-  add_phylopic(uuid = "1e606dbc-f881-4bd7-aaa5-01130f1fc6cc", fill = phylo_color, # mammals
-               x = 3, y = 42, height = 14, alpha = 1) +
-  add_phylopic(uuid = "c90aa49b-d9c5-44a4-a709-4f8d9a33b559", fill = phylo_color, # fish
-               x = 5, y = 26, height = 9, alpha = 1) +
+
+
+risk_rate <- risk_summary |> 
+  mutate(phase = case_when(
+    str_detect(threshold, "w") ~ "Warming",
+    str_detect(threshold, "p") ~ "Warming",
+    str_detect(threshold, "c") ~ "Cooling")) |>
+  pivot_longer(cols = c(perc_20_std, perc_50_std, perc_80_std),
+               names_to = "range_exposed",
+               values_to = "rate") |>
+  select(model, group, threshold, range_exposed, rate, phase) |> 
+  filter(!is.infinite(rate),
+         !is.na(rate)) 
+
+
+risk_rate_combined <- bind_rows(
+  
+  risk_rate |> 
+    mutate(dataset = "Full overshoot"),
+  
+  risk_rate |> 
+    filter(str_detect(threshold, "2") | str_detect(threshold, "peak"), !str_detect(threshold, "^2w$")) |> 
+    mutate(dataset = "2°C overshoot")
+  
+) 
+
+
+
+
+plot_b_data <- risk_rate_combined |>
+  group_by(dataset, model, group, range_exposed, phase) |>
+  summarise(avg = mean(rate),
+            .groups = "drop") |> 
+  mutate(range_exposed = case_when(
+    range_exposed == "perc_20_std" ~ "≥20%",
+    range_exposed == "perc_50_std" ~ "≥50%",
+    range_exposed == "perc_80_std" ~ "≥80%"),
+    phase = factor(phase, levels = c("Warming", "Cooling"))) |> 
+  mutate(group = factor(group, levels = c("All species", "Amphibians", "Reptiles", "Mammals", "Birds", "Fishes")),
+         realm = ifelse(group == "Fishes", "Marine", "Terrestrial"),
+         realm = factor(realm, levels = c("Terrestrial", "Marine"))) |> 
+  group_by(dataset, range_exposed, group, phase) |>
+  summarise(median_avg = median(avg),
+            min_avg = min(avg),
+            max_avg = max(avg),
+            .groups = "drop")
+
+
+####### plots -------
+
+viridis_option <- "A"
+viridis_begin <- 0.4
+viridis_end <- 0.75
+
+plot_a <- plot_a_data |>
+  ggplot(aes(x = step, y = perc_species, group = range_exposed, colour = range_exposed)) +
+  geom_segment(data = plot_a_data |> filter(threshold == "peak") |> group_by(model) |> slice(1),
+               aes(x = step, xend = step, y = 0, yend = 0.64),
+               linetype = "dashed", colour = "black", linewidth = 0.2, inherit.aes = FALSE) +
+  geom_line() +
+  facet_wrap(~model, nrow = 1, scales = "free_x") +
+  facetted_pos_scales(x = x_scales) +
+  scale_y_continuous(labels = percent_format(), limits = c(0, 0.7), expand = c(0, 0)) +
+  scale_colour_viridis_d(option = viridis_option, begin = viridis_begin, end = viridis_end, name = "% of the geographic\nrange exposed") +
+  labs(x = "Global warming level °C", y = "% of species exposed") +
   theme_tidybayes() +
-  theme(legend.position = "inside",
-        legend.justification = c(0.6,1.1),
-        legend.direction = "horizontal",
-        legend.key.height = unit(9,  "pt"),
-        legend.key.width = unit(9, "pt"),
-        plot.margin = margin(t = 3, l = 2, r = 2, unit = "line"))
+  theme(plot.margin = margin(b = 1, r = 0, l = 0, t = 2, unit = "lines"),
+        panel.grid.minor.y = element_line(linewidth = 0.25),
+        panel.grid.major.y = element_line(linewidth = 0.25),
+        axis.title.y = element_text(size = 10, vjust = 1),
+        axis.title.x = element_text(size = 9, vjust = -1),
+        axis.line.y = element_blank(),
+        axis.ticks.y = element_blank(),
+        axis.text.x = element_text(size = 8),
+        strip.text = element_text(size = 8.5, face = "bold", colour = "white"),
+        strip.background = element_rect(fill = "gray62"),
+        legend.position = "right",
+        legend.title = element_text(size = 9, vjust = 1)); plot_a
 
 
 
-
-
-p_bar <- ggplot(risk_data_plot, aes(x = group, y = exposed_median, fill = threshold)) +
-  geom_col(position = "dodge", width = 0.7) +
-  geom_errorbar(aes(ymin = exposed_min, ymax = exposed_max), width = 0.2, position = position_dodge(width = 0.7),
-                linewidth = 0.4) +
-  scale_fill_viridis_d(option = "F", begin = 0.3, end = 0.8, direction = -1, name = "") +
-  labs(x = "", y = "Species at risk of\nsevere exposure (%)") +
-  scale_y_continuous(expand = c(0,0), limits = c(0,100)) +
-  add_phylopic(uuid = "264fa655-afd7-451c-8f27-e0a9557376e6", fill = phylo_color, # reptiles
-               x = 4, y = 61, height = 15, alpha = 1) +
-  add_phylopic(uuid = "bd80bc51-460c-4dd9-8341-e5b460372efb", fill = phylo_color, # amphibians
-               x = 1, y = 73, height = 13, alpha = 1, horizontal = T) +
-  add_phylopic(uuid = "157d3109-7124-413c-8362-3abcc6889a3f", fill = phylo_color, # birds
-               x = 2, y = 33, height = 14, alpha = 1) +
-  add_phylopic(uuid = "1e606dbc-f881-4bd7-aaa5-01130f1fc6cc", fill = phylo_color, # mammals
-               x = 3, y = 42, height = 14, alpha = 1) +
-  add_phylopic(uuid = "c90aa49b-d9c5-44a4-a709-4f8d9a33b559", fill = phylo_color, # fish
-               x = 5, y = 26, height = 9, alpha = 1) +
+plot_b <- plot_b_data  |>
+  filter(dataset == "Full overshoot",
+         range_exposed == "≥80%") |> 
+  mutate(phase_num = ifelse(phase == "Warming", 1, 2.5)) |>  # adjust 2.5 for spacing
+  ggplot(aes(x = phase_num, group = range_exposed, fill = phase)) +
+  
+  # geom_point(aes(y = median_avg), size = 2.7, position = position_dodge(width = 0.3)) +
+  geom_col(aes(y = median_avg), position = position_dodge(width = 1), width = 0.9) +
+  geom_errorbar(aes(ymin = min_avg, ymax = max_avg), linewidth = 0.6,
+                width = 0, position = position_dodge(width = 1), 
+                colour = "grey10") +
+  geom_hline(yintercept = 0, colour = "grey50", linetype = "dashed") +
+  coord_cartesian(clip = "off") +
+  scale_fill_manual(values = c("#c54673", "#4298c1"), name = "",
+                    labels = c("per 0.1°C warming","per 0.1°C cooling")) +
+  scale_y_continuous(labels = percent_format(), limits = c(-0.025, 0.05), breaks = seq(-0.02, 0.05, 0.02)) +
+  scale_x_continuous(breaks = c(1, 2.5),
+                     limits = c(0.3, 3.2)) +
+  labs(y = "Change in % of species exposed", x = "") +
   theme_tidybayes() +
-  theme(legend.position = "inside",
-        legend.justification = c(0.6,1.1),
-        legend.direction = "horizontal",
-        legend.key.height = unit(9,  "pt"),
-        legend.key.width = unit(9, "pt"),
-        plot.margin = margin(t = 3, l = 2, r = 2, unit = "line"))
+  facet_wrap(~group, nrow = 1) +
+  theme(plot.margin = margin(b = 1, r = 0, l = 2, t = 1, unit = "lines"),
+        panel.grid.major.y = element_line(linewidth = 0.2),
+        panel.grid.minor.y = element_line(linewidth = 0.2),
+        axis.line.y = element_blank(),
+        axis.line.x = element_blank(),
+        axis.title.x = element_blank(),
+        axis.text.x = element_blank(),
+        axis.ticks = element_blank(),
+        axis.title.y = element_text(size = 11, vjust = 1),
+        strip.text = element_text(size = 9, face = "bold", colour = "white"),
+        strip.background = element_rect(fill = "gray62")); plot_b
 
 
-
-# p <- plot_grid(p_bar, p_map,
-#           ncol = 1, 
-#           rel_heights = c(1, 3),
-#           rel_widths = c(0.8, 1),
-#           labels = c("a", "b"),
-#           label_size = 12,
-#           label_x = 0.05,
-#           label_y = 0.95)
-
-ggsave(here("figures/Fig_01_bar.jpg"),
-       p_bar,
-       width = 20, height = 11, units = "cm", dpi = 500)
+p <- plot_a + plot_b + plot_layout(nrow = 2, heights = c(0.7, 1)) + 
+  plot_annotation(tag_levels = "a") &
+  theme(plot.tag = element_text(size = 11, face = "bold"), 
+        axis.title.y = element_text(size = 10))
 
 
-
-# panel c ----
-
-range_data_land <- c(amph, bird, mamm, rept)
-range_data_ocean <- fish
-
-length_land <- sapply(range_data_land, function(x) length(x))
-length_ocean <- sapply(range_data_ocean, function(x) length(x))
-
-range_data_land <- tibble(species = rep(names(length_land), times = length_land),
-                          world_id = unlist(range_data_land))
-
-range_data_ocean <- tibble(species = rep(names(length_ocean), times = length_ocean),
-                           world_id = unlist(range_data_ocean))
-
-
-
-risk_land <- map(c("2", "peak", "-2"), ~ {
-  
-  risk_spp <- data_median_gwl %>% 
-    filter(group != "Fishes",
-           threshold == .x,
-           range_exposed >= 0.8) %>% 
-    pull(species)
-  
-  range_data_land %>% 
-    filter(species %in% risk_spp) %>% 
-    count(world_id, name = "spp_risk") %>% 
-    mutate(threshold = .x)
-  
-}) %>% 
-  bind_rows() %>% 
-  pivot_wider(names_from = threshold, values_from = spp_risk) %>% 
-  mutate(across(everything(), ~ replace_na(.x, 0))) %>% 
-  mutate(diff = `-2` - `2`)
-
-risk_ocean <- map(c("2", "peak", "-2"), ~ {
-  
-  risk_spp <- data_plot %>% 
-    filter(group == "Fishes",
-           threshold == .x,
-           range_exposed >= 0.8) %>% 
-    pull(species)
-  
-  
-  range_data_ocean %>% 
-    filter(species %in% risk_spp) %>% 
-    count(world_id, name = "spp_risk") %>% 
-    mutate(threshold = .x)
-  
-}) %>% 
-  bind_rows() %>% 
-  pivot_wider(names_from = threshold, values_from = spp_risk) %>% 
-  mutate(across(everything(), ~ replace_na(.x, 0))) %>% 
-  mutate(diff = `-2` - `2`)
-
-grid_land <- readRDS(here("raw_data/spatial_data/terrestrial_grid_robin.rds")) %>% 
-  left_join(risk_land, by = c("WorldID" = "world_id")) %>% 
-  pivot_longer(cols = c("2", "peak", "-2"), names_to = "threshold") %>% 
-  mutate(threshold = fct_relevel(threshold, "2", "peak", "-2"))
-
-grid_ocean <- readRDS(here("raw_data/spatial_data/ocean_grid_robin.rds")) %>% 
-  left_join(risk_ocean, by = c("WorldID" = "world_id")) %>% 
-  pivot_longer(cols = c("2", "peak", "-2"), names_to = "threshold") %>% 
-  mutate(threshold = fct_relevel(threshold, "2", "peak", "-2"))
-
-
-
-max_break <- max(risk_land$peak)
-min(risk_land$peak)
-
-bks <- c(1,5,10,15,20,30,40,50,100,150,max_break)
-
-ggplot() +
-  geom_sf(data = bound, colour = NA, fill = lighten("#04061a", 0.3)) +
-  geom_sf(data = countries, colour = NA, fill = lighten("#04061a", 0.05)) +
-  geom_sf(data = grid_ocean, aes(fill = value), colour = NA, show.legend = T) +
-  geom_sf(data = grid_land, aes(fill = value), colour = NA, show.legend = T) +
-  geom_sf(data = countries, colour = alpha("white", 0.5), fill = NA,  linewidth = 0.25) +
-  scale_fill_viridis_b(option = "F", direction = 1, breaks = bks, 
-                       name = "Number of species at risk of severe exposure",
-                       end = 1, begin = 0.25, na.value = NA, limits = range(bks)) +
-  theme_map() +
-  theme(legend.position = "bottom",
-        legend.justification = "centre",
-        legend.direction = "horizontal",
-        legend.title = element_text(size = 11.5),
-        legend.text = element_text(size = 10)) +
-  guides(fill = guide_colorsteps(title.position = 'top',
-                                 title.hjust = .5,
-                                 barwidth = unit(18, 'lines'), barheight = unit(.4, 'lines'))) +
-  facet_wrap(~threshold, ncol = 3)
-
-bks_diff <- c(-1, -0.1, 1, 5, 10, 20, 30, 40, 50, max(c(grid_ocean$diff, grid_land$diff), na.rm=T))
-pal <- c("green", viridis::viridis(length(bks_diff) - 2, option = "A", begin = 0.25, direction = 1))
-
-pal <- c(viridis::viridis(length(bks_diff) - 2, option = "A", begin = 0.25, direction = 1))
-bks_diff <- c(2,5, 10, 15, 25, 50, 100, max(c(grid_ocean$diff, grid_land$diff), na.rm=T))
-
-ggplot() +
-  geom_sf(data = bound, colour = NA, fill = lighten("#09081b", 0.3)) +
-  geom_sf(data = countries, colour = NA, fill = lighten("#09081b", 0.04)) +
-  geom_sf(data = grid_ocean %>% 
-            filter(threshold == "peak",
-                   diff > 1), 
-          aes(fill = diff), colour = NA, show.legend = T) +
-  geom_sf(data = grid_land %>% 
-            filter(threshold == "peak",
-                   diff > 1), 
-          aes(fill = diff), colour = NA, show.legend = T) +
-  geom_sf(data = countries, colour = alpha("white", 0.5), fill = NA,  linewidth = 0.25) +
-  scale_fill_viridis_b(option = "A", breaks = bks_diff, begin = 0.25) +
-  theme_map() +
-  theme(legend.position = "bottom",
-        legend.justification = "centre",
-        legend.direction = "horizontal",
-        # plot.margin = margin(t = 3, b = 1, r = 1.5, l = 1.5, unit = "cm"),
-        legend.title = element_text(size = 11.5),
-        legend.text = element_text(size = 10)) &
-  guides(fill = guide_colorsteps(title.position = 'top',
-                                 title.hjust = .5,
-                                 barwidth = unit(18, 'lines'), barheight = unit(.4, 'lines')))
-
-
-
-
-bks_diff <- c(-1, -0.1, 1, 5, 10, 20, 30, 40, 50, max(c(grid_ocean$diff, grid_land$diff), na.rm=T))
-bks_diff <- c(2, 5, 10, 20, 30, 40, 50, 100, max(c(grid_ocean$diff, grid_land$diff), na.rm=T))
-
-# pal <- c("blue", scico(length(bks_diff) - 2, palette = "vik", begin = 0.55, direction = 1))
-
-ggplot() +
-  geom_sf(data = bound, colour = NA, fill = lighten("#1e0a25", 0.5)) +
-  geom_sf(data = countries, colour = NA, fill = lighten("#1e0a25", 0.05)) +
-  geom_sf(data = grid_ocean, aes(fill = diff), colour = NA, show.legend = T) +
-  geom_sf(data = grid_land, aes(fill = diff), colour = NA, show.legend = T) +
-  geom_sf(data = countries, colour = alpha("white", 0.5), fill = NA,  linewidth = 0.25) +
-  scale_fill_viridis_b(option = "H", breaks = bks_diff, begin = 0.2,
-                       name = "Difference between number of") +
-  theme_map() +
-  theme(legend.position = "bottom",
-        legend.justification = "centre",
-        legend.direction = "horizontal",
-        # plot.margin = margin(t = 3, b = 1, r = 1.5, l = 1.5, unit = "cm"),
-        legend.title = element_text(size = 11.5),
-        legend.text = element_text(size = 10)) +
-  guides(fill = guide_colorsteps(title.position = 'top',
-                                 title.hjust = .5,
-                                 barwidth = unit(18, 'lines'), barheight = unit(.4, 'lines')))
-
-
-
-
-
-
-
-p <- wrap_plots(p1[1:3]) +
-  wrap_plots(p2[1:3]) +
-  wrap_plots(pmap[1:3]) +
-  plot_layout(guides = "collect", nrow = 3) 
-
-maps <-   wrap_plots(pmap[[1]]) + wrap_plots(pmap[[2]]) + wrap_plots(pmap[[3]]) +
-  plot_layout(guides = "collect", ncol = 3) &
-  theme(legend.position = "bottom",
-        legend.justification = "centre",
-        legend.direction = "horizontal",
-        plot.margin = margin(t = 0, b = 0, r = 0, l = 0),
-        legend.title = element_text(size = 11.5),
-        legend.text = element_text(size = 10)) &
-  guides(fill = guide_colorsteps(title.position = 'top',
-                                 title.hjust = .5,
-                                 barwidth = unit(18, 'lines'), barheight = unit(.4, 'lines')))
-
-maps
-
-p <- (wrap_plots(p1[[1]]) + wrap_plots(p1[[2]]) + wrap_plots(p1[[3]]) + 
-        wrap_plots(p2[[1]]) + wrap_plots(p2[[2]]) + wrap_plots(p2[[3]]) + 
-        plot_layout(ncol = 3)) /
-  maps 
-
-ggsave(here("figures/Fig_01_new.jpg"),
-       p,
-       width = 22, height = 21, units = "cm", dpi = 500)
+ggsave(filename = here("figures/Figure_01.jpg"), 
+       p, 
+       width = 8, height = 5.5, dpi = 800)
 
 
