@@ -1,2 +1,1 @@
-# species_overshoot
-Species overshoot
+Code from Meyer et al. Species overshoot
