@@ -2,6 +2,7 @@
 .Rhistory
 .RData
 .Ruserdata
+species-overshoot.Rproj
 documentation/
 figures/
 presentation/
@@ -10,4 +11,6 @@ raw_data/
 results/
 code/.DS_Store
 .DS_Store
+code/.Rapp.history
+.positai
 code/.Rapp.history
