@@ -2,14 +2,17 @@
 .Rhistory
 .RData
 .Ruserdata
+code/.DS_Store
+.DS_Store
+code/.Rapp.history
+.positai
+species-overshoot.Rproj
+
+# folders
 documentation/
 figures/
 presentation/
 processed_data/
 raw_data/
 results/
-code/.DS_Store
-.DS_Store
-code/.Rapp.history
-.positai
-species-overshoot.Rproj
+pdfs/
