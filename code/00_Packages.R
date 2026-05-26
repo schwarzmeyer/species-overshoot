@@ -1,17 +1,8 @@
 if (!requireNamespace("pacman", quietly = TRUE)) install.packages("pacman")
-if (!requireNamespace("rnaturalearthhires", quietly = TRUE)) {remotes::install_github("ropensci/rnaturalearthhires")
-
-install.packages(
-  "rnaturalearthhires",
-  repos = "https://ropensci.r-universe.dev",
-  type = "source"
-  )
-}
-
 library(pacman)
 
-p_load(here, tidyverse, terra, sf, tictoc, glue, zoo, rnaturalearth, exactextractr, pbmcapply, rphylopic, readxl,
-       colorspace, ggdist, patchwork)
+p_load(here, scales, tictoc, scico, glue, zoo, rnaturalearth, exactextractr, pbmcapply, rphylopic, readxl,
+       colorspace, ggdist, cowplot, patchwork, tidyterra, terra, sf, tidyverse, rstatix, furrr, ggtext)
 
 # p_load(arrow, tictoc, colorspace, cowplot, exactextractr, furrr, ggdist, ggExtra,
 #        ggpointdensity, ggpubr, ggthemes, glue, here, pbmcapply, parallel, patchwork, 
@@ -19,3 +10,4 @@ p_load(here, tidyverse, terra, sf, tictoc, glue, zoo, rnaturalearth, exactextrac
 #        rphylopic, scales, scico, sf, terra, tidyverse, zoo)
 
 gc()
+
