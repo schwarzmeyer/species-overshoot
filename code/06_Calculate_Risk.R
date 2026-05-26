@@ -1,13 +1,10 @@
 source("code/00_packages.R")
 
 # this script calculates the proportion of range exposed and the duration of exposure
+# the script is also divided in two parts:
+# one calculate risk using the whole data time series.
+# the other spliting the data at different global warming levels.
 
-############################################################
-
-# the script is also divided in two parts.
-# one calculate risk using the whole data, other using the truncate estimates from script 05.
-
-# part 1 ----
 
 
 # load data
@@ -18,25 +15,32 @@ models <- c("ACCESS-ESM1-5", "CNRM-ESM2-1", "GISS-E2-1-G", "IPSL-CM6A-LR", "MRI-
 groups <- c("Amphibians", "Birds", "Mammals", "Reptiles", "Fishes")
 
 os <- readRDS(here("processed_data/climate_data/overshoot_times/overshoot_times.rds")) 
+global_temp_avg <- readRDS(here("processed_data/climate_data/global_averages/global_averages.rds"))
 
-# function to calculate risk metrics: proportion of range exposed and duration of exposure
-
-# x <- df
-# range.sizes <- species_range
-
+# function to compute risk metrics: proportion of range exposed and duration of exposure
 get_risk_metrics <- function(x, range.sizes, add.threshold = FALSE){
   
   if(add.threshold) {
     
     df <- x |> 
-      filter(deexposure >= threshold_year) |>
+      filter(deexposure >= threshold_year) |> # Filter only the ongoing exposure events
       group_by(group, species, world_id) |> 
-      summarise(duration_threshold = sum(duration_threshold)) |> 
+      summarise(duration_threshold = sum(duration_threshold),
+                .groups = "drop_last") |>
       left_join(range.sizes, by = c("species", "world_id"), relationship = "many-to-many") |> 
       summarise(range_exposed = sum(range_proportion),
                 weighted_duration = weighted.mean(duration_threshold, range_proportion),
                 .groups = "drop") |> 
-      filter(weighted_duration > 0)
+      filter(weighted_duration > 0) # Filter out grid cells that haven't been exposed yet
+    
+    # Add non-exposed species
+    non_exposed_species <- setdiff(unique(range.sizes$species), df$species)
+    non_exposed_species <- tibble(group = unique(x$group),
+                                  species = non_exposed_species,
+                                  range_exposed = 0,
+                                  weighted_duration = 0)
+    
+    df <- bind_rows(df, non_exposed_species)
     
     df$threshold <- factor(x$threshold[1])
     
@@ -52,56 +56,21 @@ get_risk_metrics <- function(x, range.sizes, add.threshold = FALSE){
               weighted_duration = weighted.mean(duration, range_proportion),
               .groups = "drop")
   
+  # Add non-exposed species
+  non_exposed_species <- setdiff(unique(range.sizes$species), df$species)
+  non_exposed_species <- tibble(group = unique(df$group),
+                                species = non_exposed_species,
+                                range_exposed = 0,
+                                weighted_duration = 0)
+  
+  df <- bind_rows(df, non_exposed_species)
   
   return(df)
 }
 
+############################################################
 
-# function to caluclate the years each global warming level is exceeded
-
-get_thresholds <- function(x, thresholds = seq(1.5, 2, 0.1)){
-  
-  warming <- map_dfr(thresholds, ~{
-    x |>
-      group_by(model) |>
-      filter(year < year_peak) |> 
-      filter(gwl > .x) |> 
-      slice_min(year) |> 
-      mutate(threshold = paste0(.x, "w")) |> 
-      select(-year_peak) |> 
-      ungroup()
-    
-  }) |> 
-    arrange(model) 
-  
-  cooling <- map_dfr(rev(thresholds), ~{
-    x |>
-      group_by(model) |>
-      filter(year > year_peak) |> 
-      filter(gwl <= .x) |> 
-      slice_min(year) |> 
-      mutate(threshold = paste0(.x, "c"))  |> 
-      select(-year_peak) |> 
-      ungroup()
-    
-  }) |> 
-    arrange(model) 
-  
-  peak <- x |> 
-    filter(year == year_peak) |> 
-    select(-year_peak) |> 
-    mutate(threshold = "peak")
-  
-  gwl_thresholds <- bind_rows(warming, cooling, peak) |> 
-    mutate(threshold = factor(threshold, levels = c("1.5w", "1.6w", "1.7w", "1.8w", "1.9w", "2w", "peak",
-                                                    "2c", "1.9c", "1.8c", "1.7c", "1.6c", "1.5c")),
-           model = factor(model)) |> 
-    ungroup()
-  
-  return(gwl_thresholds)
-  
-  
-}
+# part 1 ----
 
 res_list <- list()
 
@@ -121,7 +90,7 @@ for(.group in groups){
       grepv(pattern = .model) |> 
       readRDS() |> 
       filter(exposure < end_os)
-
+    
     species_range <- ranges |> 
       grepv(pattern = .group) |>
       readRDS() |> 
@@ -145,34 +114,11 @@ res_final <- bind_rows(res_list)
 
 saveRDS(res_final, here("results/risk/risk_raw_models.rds"))
 
-
-# res_median <- res_final |> 
-#   expand(model, species) |> 
-#   left_join(res_final, by = c("model","species")) |> 
-#   mutate(across(-c(model, species, group, range_size), ~replace(., is.na(.), 0))) |>  
-#   group_by(species) |>
-#   fill(range_size, .direction = "downup") |>
-#   summarise(n_cells_exposed = median(n_cells_exposed),
-#             total_duration = median(total_duration),
-#             range_size = median(range_size),
-#             range_exposed = median(range_exposed),
-#             mean_local_duration = median(mean_local_duration)) |>
-#   ungroup() |> 
-#   left_join(res_final |> 
-#               select(group, species), by = "species", multiple = "first") |> 
-#   relocate(group) |> 
-#   arrange(group, species) |> 
-#   filter(range_size != 0)
-# 
-# saveRDS(res_median,  here("results/risk/risk_raw_median.rds"))
-
-
 #####################################################################
 
 # calculate risk at different global warming level 
 # part 2 ----
 
-global_temp_avg <- readRDS(here("processed_data/climate_data/global_averages/global_averages.rds"))
 
 gwl_df <- global_temp_avg |> 
   group_by(model) |>
@@ -186,7 +132,26 @@ gwl_df <- global_temp_avg |>
   left_join(os |> 
               select(model, year_peak), by = "model")
 
-gwl_thresholds <- get_thresholds(gwl_df)
+gwl_thresholds <- gwl_df |> 
+  mutate(phase = case_when(year < year_peak ~ "warming",
+                           year > year_peak ~ "cooling",
+                           year == year_peak ~ "peak")) |>
+  mutate(gwl_step = ifelse(phase == "warming", floor(gwl*10)/10, ceiling(gwl*10)/10)) |> 
+  mutate(threshold = case_when(
+    phase == "warming" ~ paste0(gwl_step, "w"),
+    phase == "cooling" ~ paste0(gwl_step, "c"),
+    phase == "peak" ~ "peak",
+    TRUE ~ NA_character_
+  )) |>
+  group_by(model, threshold) |>
+  slice_min(year) |>
+  mutate(threshold = factor(threshold, levels = c(paste0(seq(1.5, 3, 0.1), "w"), 
+                                                  "peak", 
+                                                  paste0(seq(3, 1.5, -0.1), "c"))),
+         model = factor(model)) |> 
+  na.omit()
+
+saveRDS(gwl_thresholds, here("processed_data/climate_data/global_averages/gwl_thresholds.rds"))
 
 res_list <- list()
 
@@ -215,7 +180,10 @@ for(.group in groups){
                 .groups = "drop") # This step is to merge cells that are crossed by the polygon in more than one region
     
     
-    thresholds <- unique(gwl_thresholds$threshold)
+    thresholds <- gwl_thresholds |> 
+      filter(model == .model) |> 
+      pull(threshold) |> 
+      unique()
     
     result_thresholds <- map(thresholds, function(.threshold){
       
@@ -240,64 +208,26 @@ for(.group in groups){
     }) |> 
       discard(is.null) 
     
-    # result_thresholds |>
-    #   bind_rows() |>
-    #   filter(species == "Acris crepitans",
-    #          model == "ACCESS-ESM1-5",
-    #          world_id == 21689) |>
-    #   view()
-    #   
-    
-      # result_thresholds[[9]] |> 
-      #   filter(species == "Abavorana luctuosa") |> 
-      #   filter(deexposure >= threshold_year) |>
-      #   group_by(species) |> 
-      #   summarise(n_cells_exposed = length(unique(world_id)),
-      #             total_duration = sum(duration_threshold, na.rm = T))
-      
-    res <- map(result_thresholds, ~ get_risk_metrics(.x, species_range, add.threshold = TRUE)) |> 
-      bind_rows() |> 
+    plan("multisession", workers = 6)
+    res <- future_map(result_thresholds, ~ get_risk_metrics(.x, species_range, add.threshold = TRUE)) |>
+      bind_rows() |>
       mutate(model = factor(.model),
-             group = factor(.group)) |> 
+             group = factor(.group)) |>
       relocate(group)
 
-      res_list <- append(res_list, list(res))
-      
-      print(glue("{.model} {.group}"))
-      
+    
+    res_list <- append(res_list, list(res))
+    
+    print(glue("{.model} {.group}"))
+    
   }
 }
 
-res_final <- bind_rows(res_list) |> 
-  mutate(threshold = factor(threshold, levels = c("1.5w", "1.6w", "1.7w", "1.8w", "1.9w", "2w", "peak",
-                                                  "2c", "1.9c", "1.8c", "1.7c", "1.6c", "1.5c")))
+res_final <- bind_rows(res_list) |>
+  mutate(threshold = factor(threshold, levels = c(paste0(seq(1.5, 3, 0.1), "w"), 
+                                                  "peak", 
+                                                  paste0(seq(3, 1.5, -0.1), "c"))),
+         model = factor(model))
 
 saveRDS(res_final, here("results/risk/risk_thresholds_models.rds"))
-
-# res_expand <- res_final |> 
-#   expand(model, species, threshold) |> 
-#   left_join(gwl_thresholds, by = c("model","threshold")) |> 
-#   drop_na(year) |> 
-#   left_join(res_final, by = c("model","species", "threshold")) |> 
-#   group_by(species) |> 
-#   fill(group, range_size, .direction = "downup") |> 
-#   ungroup() |> 
-#   mutate(across(where(is.numeric), ~replace(., is.na(.), 0)))
-# 
-# res_median <- res_expand |> 
-#   group_by(species, threshold) |> 
-#   summarise(n_cells_exposed = median(n_cells_exposed),
-#             total_duration = median(total_duration),
-#             range_size = median(range_size),
-#             range_exposed = median(range_exposed),
-#             mean_local_duration = median(mean_local_duration),
-#             .groups = "drop") 
-# 
-# # add groups back
-# res_median <- res_median |> 
-#   left_join(res_final |> 
-#               select(group, species) |>
-#               distinct(), by = "species") 
-# 
-# saveRDS(res_median,  here("results/risk/risk_thresholds_median.rds"))
 
