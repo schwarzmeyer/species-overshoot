@@ -165,6 +165,18 @@ viridis_option <- "A"
 viridis_begin <- 0.4
 viridis_end <- 0.75
 
+mytheme <- theme(plot.margin = margin(b = 1, r = 0, l = 2, t = 1, unit = "lines"),
+                  panel.grid.major.y = element_line(linewidth = 0.2),
+                  panel.grid.minor.y = element_line(linewidth = 0.2),
+                  axis.text = element_text(size = 7),
+                  axis.line.y = element_blank(),
+                  axis.title.y = element_text(size = 8.6, vjust = 1),
+                  axis.title.x = element_text(size = 8),
+                  legend.title = element_text(size = 7.5),
+                  legend.text = element_text(size = 7),
+                  strip.text = element_text(size = 7, face = "bold", colour = "white"),
+                  strip.background = element_rect(fill = "gray62"))
+
 plot_a <- plot_a_data |>
   ggplot(aes(x = step, y = perc_species, group = range_exposed, colour = range_exposed)) +
   geom_segment(data = plot_a_data |> filter(threshold == "peak") |> group_by(model) |> slice(1),
@@ -177,20 +189,7 @@ plot_a <- plot_a_data |>
   scale_colour_viridis_d(option = viridis_option, begin = viridis_begin, end = viridis_end, name = "Geographic range\nexposure threshold") +
   labs(x = "Global warming level °C", y = "% of species exposed") +
   theme_tidybayes() +
-  theme(plot.margin = margin(b = 1, r = 0, l = 0, t = 2, unit = "lines"),
-        panel.grid.minor.y = element_line(linewidth = 0.25),
-        panel.grid.major.y = element_line(linewidth = 0.25),
-        axis.title.y = element_text(size = 10, vjust = 1),
-        axis.title.x = element_text(size = 9, vjust = -1),
-        axis.line.y = element_blank(),
-        axis.ticks.y = element_blank(),
-        axis.text.x = element_text(size = 8),
-        strip.text = element_text(size = 8.5, face = "bold", colour = "white"),
-        strip.background = element_rect(fill = "gray62"),
-        legend.position = "right",
-        legend.title = element_text(size = 9, vjust = 1)); plot_a
-
-
+  mytheme; plot_a
 
 plot_b <- plot_b_data  |>
   filter(dataset == "Full overshoot",
@@ -205,35 +204,27 @@ plot_b <- plot_b_data  |>
                 colour = "grey10") +
   geom_hline(yintercept = 0, colour = "grey50", linetype = "dashed") +
   coord_cartesian(clip = "off") +
-  scale_fill_manual(values = c("#c54673", "#4298c1"), name = "",
-                    labels = c("per 0.1°C warming","per 0.1°C cooling")) +
+  scale_fill_manual(values = c("#c54673", "#4298c1"), name = "Change per",
+                    labels = c("0.1°C warming","0.1°C cooling")) +
   scale_y_continuous(labels = percent_format(), limits = c(-0.025, 0.05), breaks = seq(-0.02, 0.05, 0.02)) +
   scale_x_continuous(breaks = c(1, 2.5),
                      limits = c(0.3, 3.2)) +
   labs(y = "Change in % of species exposed", x = "") +
   theme_tidybayes() +
   facet_wrap(~group, nrow = 1) +
-  theme(plot.margin = margin(b = 1, r = 0, l = 2, t = 1, unit = "lines"),
-        panel.grid.major.y = element_line(linewidth = 0.2),
-        panel.grid.minor.y = element_line(linewidth = 0.2),
-        axis.line.y = element_blank(),
+  mytheme +
+  theme(axis.title.x = element_blank(),
         axis.line.x = element_blank(),
-        axis.title.x = element_blank(),
         axis.text.x = element_blank(),
-        axis.ticks = element_blank(),
-        axis.title.y = element_text(size = 11, vjust = 1),
-        strip.text = element_text(size = 9, face = "bold", colour = "white"),
-        strip.background = element_rect(fill = "gray62")); plot_b
-
+        axis.ticks = element_blank())
 
 p <- plot_a + plot_b + plot_layout(nrow = 2, heights = c(0.7, 1)) + 
   plot_annotation(tag_levels = "a") &
-  theme(plot.tag = element_text(size = 11, face = "bold"), 
-        axis.title.y = element_text(size = 10))
+  theme(plot.tag = element_text(size = 10, face = "bold"))
 
 
 ggsave(filename = here("figures/Figure_01.jpg"), 
        p, 
-       width = 8, height = 5.5, dpi = 800)
+       width = 18, height = 12, dpi = 800, units = "cm")
 
 

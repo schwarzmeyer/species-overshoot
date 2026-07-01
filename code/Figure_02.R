@@ -1,5 +1,3 @@
-
-
 # FIGURE 2
 source("code/00_packages.R")
 source("code/functions/tibble_to_raster.R")
@@ -136,7 +134,7 @@ plot_a <- plot_data_a |>
                 linewidth = 0.4, colour = "grey10") +
   # scale_fill_viridis_d(option = "A", begin = 0.34, end = 0.8, direction = -1, name = "") +
   scale_fill_manual(values = pal_a, name = "") +
-  labs(x = "", y = "Species at risk of severe exposure") +
+  labs(x = "", y = "Species at risk of\nsevere exposure") +
   scale_y_continuous(expand = c(0, 0), limits = c(0, 75), labels = function(x) glue("{x}%")) +
   geom_phylopic(data = phylopics, aes(x = x, y = y, uuid = uuid),
                 fill = phylo_color,
@@ -160,7 +158,7 @@ plot_a <- plot_data_a |>
         panel.grid.minor.y = element_line(linewidth = 0.13),
         strip.text = element_text(size = 9, face = "bold", colour = "white"),
         strip.background = element_rect(fill = "gray62"),
-        plot.margin = margin(t = 2, l = 4, r = 5, b = 1, unit = "line")) +
+        plot.margin = margin(t = 2, l = 1.3, r = 3, b = 1, unit = "line")) +
   theme(legend.justification = c(0.9, 1.05))
 
 
@@ -242,7 +240,7 @@ p <- plot_grid(plot_a, plot_b,
 
 ggsave(here("figures/Figure_02.jpg"),
        p,
-       width = 20, height = 21, units = "cm", dpi = 800)
+       width = 18, height = 20, units = "cm", dpi = 800)
 
 
 

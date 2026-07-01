@@ -52,9 +52,9 @@ plot_a <- plot_data_a |>
   labs(y = "% of exposure events", x = "") +
   theme_tidybayes() +
   theme(axis.line.y = element_blank(),
-        axis.title.y = element_text(size = 9, vjust = 0.6),
-        axis.text.x = element_text(size = 7.5, angle = 30, vjust = 0.5),
-        axis.text.y = element_text(size = 8),
+        axis.title.y = element_text(size = 8, vjust = 0.6),
+        axis.text.x = element_text(size = 7, angle = 30, vjust = 0.5),
+        axis.text.y = element_text(size = 7.5),
         panel.grid.major.y = element_line(linewidth = 0.2),
         legend.position = "inside",
         legend.position.inside = c(0.2,-0.4),
@@ -129,10 +129,10 @@ plot_b <- data |>
   theme_tidybayes() +
   theme(panel.grid.major.x = element_line(linewidth = 0.1),
         panel.grid.minor.x = element_line(linewidth = 0.1),
-        axis.title.x = element_text(size = 9, vjust = 9),
-        axis.text.x = element_text(size = 8),
+        axis.text.y = element_text(size = 7.5),
+        axis.title.x = element_text(size = 8, vjust = 9),
+        axis.text.x = element_text(size = 7),
         axis.title.y = element_blank(),
-        axis.text.y = element_text(size = 8.5),
         axis.line.y = element_blank(),
         axis.ticks.y = element_blank(),
         plot.margin = margin(r = 0.4, t = 0, b = 1, unit = "line"),
@@ -223,8 +223,8 @@ theme_maps <- theme(legend.position = "inside",
                     legend.position.inside = c(0.5, -0.2),
                     legend.direction = "horizontal",
                     plot.margin = margin(t = 0, b = 0, unit = "line"),
-                    legend.title = element_text(size = 8),
-                    legend.text = element_text(size = 7))  
+                    legend.title = element_text(size = 7.5),
+                    legend.text = element_text(size = 6.5))  
 
 guide_maps <-   guides(fill = guide_colorsteps(title.position = "top",
                                               reverse = TRUE,
@@ -322,7 +322,7 @@ plot_lat <- data_lat |>
         legend.text = element_text(size = 7),
         legend.key.size = unit(6, "pt"),
         legend.background = element_blank(),
-        axis.title = element_text(size = 8),
+        axis.title = element_text(size = 7.5),
         axis.title.y = element_text(vjust = -3),
         axis.text = element_text(size = 7)) +
   guides(colour = guide_legend(override.aes = list(fill = NA)))
@@ -339,15 +339,17 @@ p <- ggdraw() +
   draw_plot(p1, x = 0.07, , y = 0.55, height = 0.4, width = 0.85) +
   draw_plot(plot_lat, x = 0.8, y = 0.15, width = 0.18, height = 0.295) +
   draw_plot(p2, x = -0.09, y = -0.16, scale = 0.8) +
-  draw_text("a", x = 0.05, y = 0.97, size = 11, fontface = "bold") +
-  draw_text("b", x = 0.5, y = 0.97, size = 11, fontface = "bold") +
-  draw_text("c", x = 0.05, y = 0.49, size = 11, fontface = "bold") +
-  draw_text("d", x = 0.45, y = 0.49, size = 11, fontface = "bold") +
-  draw_text("e", x = 0.82, y = 0.49, size = 11, fontface = "bold") 
+  draw_text("a", x = 0.05, y = 0.97, size = 10, fontface = "bold") +
+  draw_text("b", x = 0.5, y = 0.97, size = 10, fontface = "bold") +
+  draw_text("c", x = 0.05, y = 0.49, size = 10, fontface = "bold") +
+  draw_text("d", x = 0.45, y = 0.49, size = 10, fontface = "bold") +
+  draw_text("e", x = 0.82, y = 0.49, size = 10, fontface = "bold") +
+  draw_text("More cooling required", x = 0.79, y = 0.95, size = 6, fontface = "italic") +
+  draw_text("Less cooling required", x = 0.66, y = 0.95, size = 6, fontface = "italic") 
 
 ggsave(here("figures/Figure_03.jpg"),
        p,
-       width = 23, height = 18, units = "cm", dpi = 700)
+       width = 18, height = 16, units = "cm", dpi = 700)
 
 
 
