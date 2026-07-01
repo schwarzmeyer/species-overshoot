@@ -2,7 +2,7 @@
 source("code/00_packages.R")
 
 # load data
-risk_data <- readRDS(here("results/risk/risk_thresholds_models_v2.rds"))
+risk_data <- readRDS(here("results/risk/risk_thresholds_models.rds"))
 gwl_thresholds <- readRDS(here("processed_data/climate_data/global_averages/gwl_thresholds.rds"))
 
 group_richness <- list.files(here("processed_data/species_data/range_maps_grid_cells/"), full.names = TRUE) |> 
@@ -174,7 +174,7 @@ plot_a <- plot_a_data |>
   facet_wrap(~model, nrow = 1, scales = "free_x") +
   facetted_pos_scales(x = x_scales) +
   scale_y_continuous(labels = percent_format(), limits = c(0, 0.7), expand = c(0, 0)) +
-  scale_colour_viridis_d(option = viridis_option, begin = viridis_begin, end = viridis_end, name = "% of the geographic\nrange exposed") +
+  scale_colour_viridis_d(option = viridis_option, begin = viridis_begin, end = viridis_end, name = "Geographic range\nexposure threshold") +
   labs(x = "Global warming level °C", y = "% of species exposed") +
   theme_tidybayes() +
   theme(plot.margin = margin(b = 1, r = 0, l = 0, t = 2, unit = "lines"),
