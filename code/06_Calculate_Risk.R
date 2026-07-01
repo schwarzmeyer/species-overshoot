@@ -50,7 +50,8 @@ get_risk_metrics <- function(x, range.sizes, add.threshold = FALSE){
   
   df <- x |> 
     group_by(group, species, world_id) |> 
-    summarise(duration = sum(duration)) |> 
+    summarise(duration = sum(duration),
+              .groups = "drop_last") |> 
     left_join(range.sizes, by = c("species", "world_id"), relationship = "many-to-many") |> 
     summarise(range_exposed = sum(range_proportion),
               weighted_duration = weighted.mean(duration, range_proportion),

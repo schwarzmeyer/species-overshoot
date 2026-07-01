@@ -6,7 +6,7 @@ print("Running: 01_Prepare_Climate_Data.R")
 #############################################################
 
 # list files
-netcdfs <- list.files(here("raw_data/climate_data/CMIP6/Overshoot"), ".nc", recursive = T, full.names = T)
+netcdfs <- list.files(here("raw_data/climate_data/CMIP6/Overshoot"), ".nc", recursive = TRUE, full.names = TRUE)
 
 # pars
 variables <- c("tas","tos")
